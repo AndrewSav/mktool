@@ -69,11 +69,14 @@ namespace mktool.Commands
 
                 if (matches.Count > 1)
                 {
-                    Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
-                    Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
                     string message = $"There are {matches.Count} wifi records with this MAC. Update not attempted";
+                    if (!options.SkipExisting)
+                    {
+                        Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+                        Console.WriteLine($"?Warning: message");
+                    }
+                    Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
                     Log.Warning(message);
-                    Console.WriteLine($"?Warning: message");
                     continue;
                 }
                 if (matches.Count == 0)
@@ -82,17 +85,20 @@ namespace mktool.Commands
                 }
                 else
                 {
-                    UpdateMikrotikWifiRecord(connection, matches[0], record, options.Execute, options.ContinueOnErrors);
+                    UpdateMikrotikWifiRecord(options, connection, matches[0], record);
 
                 }
             }
         }
 
-        private static void UpdateMikrotikWifiRecord(ITikConnection connection, ITikSentence existing, Record record, bool execute, bool continueOnErrors)
+        private static void UpdateMikrotikWifiRecord(ImportOptions options, ITikConnection connection, ITikSentence existing, Record record)
         {
             if (string.IsNullOrWhiteSpace(record.DnsHostName) || existing.Words["comment"] == record.DnsHostName)
             {
-                Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+                if (!options.SkipExisting)
+                {
+                    Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+                }
                 Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
                 return;
             }
@@ -108,10 +114,10 @@ namespace mktool.Commands
                 $"=comment={record.DnsHostName}",
                 $"=.id={existing.Words[".id"]}",
             };
-            if (execute)
+            if (options.Execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(continueOnErrors, result);
+                ProcessMikrotikResponse(options.ContinueOnErrors, result);
             }
         }
 
@@ -180,7 +186,7 @@ namespace mktool.Commands
                     }
                     else
                     {
-                        ReportDnsRecordExists(record);
+                        ReportDnsRecordExists(options, record);
                     }
                 }
             }
@@ -221,16 +227,22 @@ namespace mktool.Commands
             }
         }
 
-        private static void ReportDnsRecordExists(Record record)
+        private static void ReportDnsRecordExists(ImportOptions options, Record record)
         {
             if (string.Compare(record.DnsType, "A", true) == 0)
             {
-                Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
+                if (!options.SkipExisting)
+                {
+                    Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
+                }
                 Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.IP);
             }
             else
             {
-                Console.WriteLine($"=DNS CNAME record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
+                if (!options.SkipExisting)
+                {
+                    Console.WriteLine($"=DNS CNAME record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
+                }
                 Log.Information($"DNS CNAME record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType, record.DnsCName);
             }
         }
@@ -262,7 +274,7 @@ namespace mktool.Commands
                 {
                     if (ipMatches[0] == macMatches[0])
                     {
-                        UpdateMikrotikDhcpRecord(connection, ipMatches[0], record, options.Execute, options.ContinueOnErrors);
+                        UpdateMikrotikDhcpRecord(options, connection, ipMatches[0], record);
                     }
                     else
                     {
@@ -274,11 +286,11 @@ namespace mktool.Commands
 
                 if (ipMatches.Count == 1 && macMatches.Count == 0)
                 {
-                    UpdateMikrotikDhcpRecord(connection, ipMatches[0], record, options.Execute, options.ContinueOnErrors);
+                    UpdateMikrotikDhcpRecord(options, connection, ipMatches[0], record);
                 }
                 if (ipMatches.Count == 0 && macMatches.Count == 1)
                 {
-                    UpdateMikrotikDhcpRecord(connection, macMatches[0], record, options.Execute, options.ContinueOnErrors);
+                    UpdateMikrotikDhcpRecord(options, connection, macMatches[0], record);
                 }
                 if (ipMatches.Count == 0 && macMatches.Count == 0)
                 {
@@ -315,7 +327,7 @@ namespace mktool.Commands
             }
         }
 
-        private static void UpdateMikrotikDhcpRecord(ITikConnection connection, ITikSentence existing, Record record, bool execute, bool continueOnErrors)
+        private static void UpdateMikrotikDhcpRecord(ImportOptions options, ITikConnection connection, ITikSentence existing, Record record)
         {
             Dictionary<string, string> fieldsToUpdate = new Dictionary<string, string>();
 
@@ -348,7 +360,10 @@ namespace mktool.Commands
 
             if (fieldsToUpdate.Count == 0)
             {
-                Console.WriteLine($"=DHCP record already exist. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
+                if (!options.SkipExisting)
+                {
+                    Console.WriteLine($"=DHCP record already exist. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
+                }
                 Log.Information("DHCP record already exist. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
                 return;
             }
@@ -365,10 +380,10 @@ namespace mktool.Commands
                 .Concat(fieldsToUpdate.Select(x => $"={x.Key}={x.Value}"))
                 .Concat(new[] { $"=.id={existing.Words[".id"]}" })
                 .ToArray();
-            if (execute)
+            if (options.Execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(continueOnErrors, result);
+                ProcessMikrotikResponse(options.ContinueOnErrors, result);
             }
         }
 

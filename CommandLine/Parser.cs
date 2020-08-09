@@ -395,6 +395,9 @@ namespace mktool.CommandLine
                 new Option<bool>(
                     new []{ "--continue-on-errors", "-k" },
                     description: "Does not stop execution with a error code when the was a error writing a record to Mikrotik"),
+                new Option<bool>(
+                    new []{ "--skip-existing", "-s" },
+                    description: "Reduce output verbosity by not printing already existing records that will not be updated"),
             };
             AddGlobalValidators(command);
 
