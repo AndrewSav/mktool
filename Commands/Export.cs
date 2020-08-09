@@ -17,7 +17,7 @@ using YamlDotNet.Serialization;
 
 namespace mktool.Commands
 {
-    static partial class Export
+    static class Export
     {
         class TomlWrapper
         {
@@ -53,7 +53,7 @@ namespace mktool.Commands
 
             Debug.Assert(connection != null);
 
-            Log.Information("Retreiving dhcp");
+            Log.Information("Retreiving DHCP");
             IEnumerable<ITikSentence> dhcp;
             try
             {
@@ -89,7 +89,7 @@ namespace mktool.Commands
                 Log.Verbose("Mktool record added: {@record}", record);
             }
 
-            Log.Information("Retreiving dns");
+            Log.Information("Retreiving DNS");
             IEnumerable<ITikSentence> dns;
             try
             {
@@ -161,11 +161,11 @@ namespace mktool.Commands
                 }
             }
 
-            Log.Information("Retreiving wifi");
-            IEnumerable<ITikSentence> wifi;
+            Log.Information("Retreiving WiFi");
+            IEnumerable<ITikSentence> WiFi;
             try
             {
-                wifi = connection.CallCommandSync(new[] { "/interface/wireless/access-list/print" });
+                WiFi = connection.CallCommandSync(new[] { "/interface/wireless/access-list/print" });
             }
             catch (Exception ex)
             {
@@ -173,17 +173,17 @@ namespace mktool.Commands
                 return (int)ExitCode.MikrotikConnectionError;
             }
 
-            Log.Verbose("Wifi response: {@response}", wifi);
+            Log.Verbose("WiFi response: {@response}", WiFi);
 
-            foreach (ITikSentence item in wifi)
+            foreach (ITikSentence item in WiFi)
             {
                 if (!item.Words.ContainsKey(".id"))
                 {
-                    Log.Verbose("Tik wifi record discraded: {@ITikSentence}", item);
+                    Log.Verbose("Tik WiFi record discraded: {@ITikSentence}", item);
                     continue;
                 }
 
-                Log.Verbose("Tik wifi record processing: {@ITikSentence}", item);
+                Log.Verbose("Tik WiFi record processing: {@ITikSentence}", item);
                 List<Record> matches = result.Where(r => string.Compare(r.Mac, item.Words["mac-address"], true) == 0).ToList();
                 Log.Verbose("Matches found: {@records}", matches);
                 if (matches.Count > 1)
@@ -196,7 +196,7 @@ namespace mktool.Commands
                     {
                         DnsHostName = item.Words["comment"],
                         Mac = item.Words["mac-address"],
-                        HasWifi = true
+                        HasWiFi = true
                     };
                     result.Add(record);
                     Log.Verbose("Mktool record added: {@record}", record);
@@ -204,7 +204,7 @@ namespace mktool.Commands
                 else
                 {
                     Record record = matches[0];
-                    record.HasWifi = true;
+                    record.HasWiFi = true;
                     Log.Verbose("Mktool record updated: {@record}", record);
                 }
             }

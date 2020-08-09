@@ -10,18 +10,16 @@ using System.Threading.Tasks;
 
 namespace mktool.CommandLine
 {
-    //TODO: token validation?
-    //TODO: provision DNS only?
-    //TODO: provision wifi only? (scrape log)
-    //TODO: option to NOT provision DNS
+  
+    //TODO: provision WiFi only? (scrape log)
     //TODO: DHCP - convert dynamic records
-    //TODO: Import dry run
-    //TODO: Add "main" loggging with serilog
+    
     static class Parser
     {
 
         public static async Task<int> InvokeAsync(string[] args, IConsole? console = null)
         {
+            // This is to exclued ExceptionHandler middleware, to prevent CommandLine library from swallwing exceptions
             System.CommandLine.Parsing.Parser? _ = new CommandLineBuilder(RootCommand)
                    .UseVersionOption()
                    .UseHelp()
@@ -46,39 +44,43 @@ namespace mktool.CommandLine
 
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--address", "-a" },
-                    description: "Network address, ip or dns, for Miktorik"));
+                    description: "(global) Network address, IP or DNS, for Miktorik"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--user", "-u" },
-                    description: "Connection user for Miktorik"));
+                    description: "(global) Connection user for Miktorik"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--password", "-p" },
-                    description: "Connection password for Miktorik"));
+                    description: "(global) Connection password for Miktorik"));
+
             rootCommand.AddGlobalOption(new Option<string>(
-                    new[] { "--vault-user-location", "--vul", "-z" },
-                    description: "Path to Mikrotik user in vault. Include the secret mountpoint and separate they key with colon, e.g. 'secert/my/path:user'"));
+                    new[] { "--vault-address", "--va", "-v" },
+                    description: "(global) Vault url, e.g. https://vault, alternatively can be specified in VAULD_ADDR environment variable"));
+
             rootCommand.AddGlobalOption(new Option<string>(
-                    new[] { "--vault-password-location", "--vpl", "-y" },
-                    description: "Path to Mikrotik password in vault. Include the secret mountpoint and separate they key with colon, e.g. 'secert/my/path:pwd'"));
+                    new[] { "--vault-user-location", "--vul" },
+                    description: "(global) Path to Mikrotik user in vault, e.g. 'secert/my/path'"));
             rootCommand.AddGlobalOption(new Option<string>(
-                    new[] { "--vault-user-key", "--vuk", "-c" },
+                    new[] { "--vault-password-location", "--vpl" },
+                    description: "(global) Path to Mikrotik password in vault, e.g. 'secert/my/path'"));
+
+            rootCommand.AddGlobalOption(new Option<string>(
+                    new[] { "--vault-user-key", "--vuk" },
                     getDefaultValue: () => "username",
-                    description: "Path to Mikrotik user in vault. Include the secret mountpoint and separate they key with colon, e.g. 'secert/my/path:user'"));
+                    description: "(global) Key of the username in Vault under path given by --vault-user-location"));
             rootCommand.AddGlobalOption(new Option<string>(
-                    new[] { "--vault-password-key", "--vpk", "-b" },
+                    new[] { "--vault-password-key", "--vpk" },
                     getDefaultValue: () => "password",
-                    description: "Path to Mikrotik password in vault. Include the secret mountpoint and separate they key with colon, e.g. 'secert/my/path:pwd'"));
-            rootCommand.AddGlobalOption(new Option<string>(
-                    new[] { "--vault-address", "--va", "-x" },
-                    description: "Vault url, e.g. https://vault, alternatively can be specified in VAULD_ADDR environment variable"));
+                    description: "(global) Key of the username in Vault under path given by --vault-password-location"));
+            
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--vault-token", "--vt", "-t" },
-                    description: $"Vault token, alternatively can be specified in VAULT_TOKEN environment variable, or {rootCommand.Name} can reuse results of 'vault login' command"));
+                    description: $"(global) Vault token, alternatively can be specified in VAULT_TOKEN environment variable, or {rootCommand.Name} can reuse results of 'vault login' command"));
             rootCommand.AddGlobalOption(new Option<bool>(
-                    new[] { "--vault-diag", "--vd", "-d" },
-                    description: $"In case of problems with Vault response will dump the content of the respond to stderr"));
+                    new[] { "--vault-diag", "--vd", "-z" },
+                    description: $"(global) In case of problems with Vault response will dump the content of the respond to stderr"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--log-level", "-l" },
-                    description: $"Write log to {LoggingHelper.LogFile}. Re-created each run") { Argument = new Argument<string>().FromAmong(new[] { "verbose", "debug","information","warning","error","fatal"})});
+                    description: $"(global) Write log to {LoggingHelper.LogFile}. Re-created each run") { Argument = new Argument<string>().FromAmong(new[] { "verbose", "debug","information","warning","error","fatal"})});
 
             rootCommand.Add(BuildExportCommand());
             rootCommand.Add(BuildImportCommand());
@@ -196,7 +198,7 @@ namespace mktool.CommandLine
 
         private static Command BuildDeprovisionCommand()
         {
-            Command command = new Command("deprovision", "Deprovision an IP address on Mikrotik");
+            Command command = new Command("deprovision", "Deprovision an IP address on Mikrotik from DHCP, DNS and WiFi");
 
             Option<string> macAddressOption = new Option<string>(new[] { "--mac-address", "-m" }, description: "MAC address to deprovision"); 
             macAddressOption.AddValidator(r =>
@@ -220,25 +222,30 @@ namespace mktool.CommandLine
                 return null;
             });
 
+            Option<string> dnsNameOption = new Option<string>(new[] { "--dns-name", "-d" }, description: "DNS name to deprovision");
+            Option<string> labelOption = new Option<string>(new[] { "--label", "-b" }, description: "DHCP comment to deprovision");
+
             command.Add(macAddressOption);
             command.Add(ipAddressOption);
+            command.Add(dnsNameOption);
+            command.Add(labelOption);
 
             command.AddValidator(commandResult =>
             {
-                if (commandResult.Children.Contains("mac-address") &&
-                    commandResult.Children.Contains("ip-address"))
+                int total = GetNumberOfOnSwitches(commandResult, new[] { "ip-address", "mac-address", "dns-name", "label"});
+                if (total > 1 )
                 {
-                    return "Options '--mac-address' and '--ip-address' cannot be used together.";
+                    return "Options '--mac-address', '--ip-address', '--dns-name', '--label' cannot be used together.";
                 }
                 return null;
             });
 
             command.AddValidator(commandResult =>
             {
-                if (!commandResult.Children.Contains("mac-address") &&
-                    !commandResult.Children.Contains("ip-address"))
+                int total = GetNumberOfOnSwitches(commandResult, new[] { "ip-address", "mac-address", "dns-name", "label" });
+                if (total == 0)
                 {
-                    return "One of the options '--mac-address' and '--ip-address' is required.";
+                    return "One of the options '--mac-address', '--ip-address', '--dns-name', '--label' is required.";
                 }
                 return null;
             });
@@ -253,26 +260,39 @@ namespace mktool.CommandLine
             return command;
         }
 
+        private static int GetNumberOfOnSwitches(CommandResult commandResult, string[] switchNames)
+        {
+            int result = 0;
+            foreach(var name in switchNames)            
+            {
+                if (commandResult.Children.Contains(name))
+                {
+                    result++;
+                }
+            }
+            return result;
+        }
+
         private static Command BuildProvisionCommand()
         {
-            Command command = new Command("provision", "Provision a new IP address on Mikroik, and return information about the address provisioned")
+            Command command = new Command("provision", "Provision a new DHCP or DNS record on Mikroik");
+            Command dhcpCommand = BuildProvisionDhcpCommand();
+            Command dnsCommand = BuildProvisionDnsCommand();
+
+            command.Add(dhcpCommand);
+            command.Add(dnsCommand);
+
+            command.Handler = CommandHandler.Create(() =>
             {
-                new Option<FileInfo>(
-                    new []{ "--config", "-с" },
-                    description: "Allocations config file path",
-                    getDefaultValue: () => new FileInfo("mktool.toml")),
-                new Option<string>(
-                    new []{ "--allocation", "-a" },
-                    description: "Allocation name") { IsRequired = true },
-                new Option<bool>(
-                    new []{ "--enable-wifi", "-w" },
-                    description: "Enable wifi access for the MAC address"),
-                new Option<string>(
-                    new []{ "--label", "-l" },
-                    description: "Comment field for the DHCP lease on Mikrotik, if different from dns-name or dns name is not specified"),
-            };
-            
-            Option<string> dnsNameOption = new Option<string>(new[] { "--dns-name", "-d" }, description: "Create a dns record for the address");
+                command.Invoke(new[] { "-h" });
+            });
+
+            return command;
+        }
+
+        private static Command BuildProvisionDhcpCommand()
+        {
+            Option<string> dnsNameOption = new Option<string>(new[] { "--dns-name", "-d" }, description: "Create a DNS record for the address, with specified name");
 
             dnsNameOption.AddValidator(r =>
             {
@@ -295,33 +315,84 @@ namespace mktool.CommandLine
                 return null;
             });
 
-            command.Add(macAddressOption);
-            command.Add(dnsNameOption);
-
-
-            AddGlobalValidators(command);
-
-            command.Handler = CommandHandler.Create<ProvisionOptions>(async (provisionOptions) =>
+            Command dhcpCommand = new Command("dhcp", "Provision a new DHCP record on Mikroik, and return information about the address provisioned")
             {
-                return await Provision.Execute(provisionOptions);
+                macAddressOption,
+                dnsNameOption,
+                new Option<FileInfo>(
+                    new []{ "--config", "-с" },
+                    description: "Allocations config file path",
+                    getDefaultValue: () => new FileInfo("mktool.toml")),
+                new Option<string>(
+                    new []{ "--allocation", "-n" },
+                    description: "Allocation name (one of the names present in the allocations config)") { IsRequired = true },
+                new Option<bool>(
+                    new []{ "--enable-WiFi", "-w" },
+                    description: "Enable WiFi access for the MAC address"),
+                new Option<string>(
+                    new []{ "--label", "-b" },
+                    description: "Comment field for the DHCP lease on Mikrotik, if different from dns-name or dns-name is not specified"),
+                new Option<bool>(
+                    new []{ "--execute", "-e" },
+                    description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik."),
+            };
+            AddGlobalValidators(dhcpCommand);
+
+            dhcpCommand.Handler = CommandHandler.Create<ProvisionDhcpOptions>(async (provisionOptions) =>
+            {
+                return await ProvisionDhcp.Execute(provisionOptions);
             });
+            return dhcpCommand;
+        }
 
-            return command;
+        private static Command BuildProvisionDnsCommand()
+        {
+            Command dnsCommand = new Command("dns", "Provision a new DNS record on Mikroik")
+            {
+                new Option<string>(
+                    new []{ "--record-type", "-r" },
+                    description: "Dns record type") { Argument = new Argument<string>(() => "a").FromAmong(new[] { "a", "cname"}) },
+                new Option<string>(
+                    new []{ "--dns-name", "-d" },
+                    description: "DNS record name.  Mutually exclusine with '--regexp'"),
+                new Option<bool>(
+                    new []{ "--regexp", "-x" },
+                    description: "Provide Mikrotik regular expression. Mutually exclusine with '--dns-name'"),
+                new Option<string>(
+                    new []{ "--ip-address", "-i" },
+                    description: "Provide IP address for record type 'a'"),
+                new Option<string>(
+                    new []{ "--cname", "-y" },
+                    description: "Provide CNAME for record type 'cname'"),
+                new Option<bool>(
+                    new []{ "--execute", "-e" },
+                    description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik."),
+            };
 
+
+            AddGlobalValidators(dnsCommand);
+
+            dnsCommand.Handler = CommandHandler.Create<ProvisionDnsOptions>(async (provisionOptions) =>
+            {
+                return await ProvisionDns.Execute(provisionOptions);
+            });
+            return dnsCommand;
         }
 
         private static Command BuildImportCommand()
         {
             Command command = new Command("import", "Import (apply) provisioning configuration from file to Mikrotik")
-                {
-                    new Option<FileInfo>(
-                        new []{ "--file", "-f" },
-                        description: "Read from specified file") { IsRequired = true },
-                    new Option<string>(
-                        new []{ "--format", "-o" },
-                        description: "Export format") { Argument = new Argument<string>().FromAmong("toml","yaml","json","csv")},
-
-                };
+            {
+                new Option<FileInfo>(
+                    new []{ "--file", "-f" },
+                    description: "Read from specified file") { IsRequired = true },
+                new Option<string>(
+                    new []{ "--format", "-o" },
+                    description: "Export format") { Argument = new Argument<string>().FromAmong("toml","yaml","json","csv")},
+                new Option<bool>(
+                    new []{ "--execute", "-e" },
+                    description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik."),
+            };
             AddGlobalValidators(command);
             command.Handler = CommandHandler.Create<ImportOptions>(async (importOptions) =>
             {
@@ -338,9 +409,6 @@ namespace mktool.CommandLine
                     new Option<FileInfo>(
                         new []{ "--file", "-f" },
                         description: "Write to specified file instead of stdout"),
-                    new Option<bool>(
-                        new []{ "--no-warnings", "-s" },
-                        description: "Suppress warnings about potential re-import issues"),
                     new Option<string>(
                         new []{ "--format", "-o" },
                         description: "Export format") { Argument = new Argument<string>(() => "csv").FromAmong("toml","yaml","json","csv")},

@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace mktool.Commands
 {
-    static class Provision
+    static class ProvisionDhcp
     {
-        public static async Task<int> Execute(ProvisionOptions options)
+        public static async Task<int> Execute(ProvisionDhcpOptions options)
         {
             if (!LoggingHelper.ConfigureLogging(options.LogLevel)) { return (int)ExitCode.LoggingInitError; }
             Log.Information("Provision command started");
