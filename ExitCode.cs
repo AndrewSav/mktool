@@ -12,6 +12,7 @@ namespace mktool
         VaultMissingToken,
         VaultHttpError,
         MikrotikConnectionError,
-        FileWriteError
+        FileWriteError,
+        LoggingInitError
     }
 }

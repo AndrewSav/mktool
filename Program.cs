@@ -19,6 +19,9 @@ namespace mktool
             {
                 HandleUnhandledException(ex);
                 return 127;
+            } finally
+            {
+                Log.CloseAndFlush();
             }
         }
 

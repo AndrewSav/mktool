@@ -1,4 +1,5 @@
 ﻿using mktool.Commands;
+using mktool.Utility;
 using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
@@ -75,6 +76,9 @@ namespace mktool.CommandLine
             rootCommand.AddGlobalOption(new Option<bool>(
                     new[] { "--vault-diag", "--vd", "-d" },
                     description: $"In case of problems with Vault response will dump the content of the respond to stderr"));
+            rootCommand.AddGlobalOption(new Option<string>(
+                    new[] { "--log-level", "-l" },
+                    description: $"Write log to {LoggingHelper.LogFile}. Re-created each run") { Argument = new Argument<string>().FromAmong(new[] { "verbose", "debug","information","warning","error","fatal"})});
 
             rootCommand.Add(BuildExportCommand());
             rootCommand.Add(BuildImportCommand());

@@ -4,6 +4,7 @@ using mktool.Models;
 using mktool.Utility;
 using Nett;
 using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,17 +17,19 @@ using YamlDotNet.Serialization;
 
 namespace mktool.Commands
 {
-    static class Export
+    static partial class Export
     {
         class TomlWrapper
         {
             public Record[]? Record { get; set; }
         }
 
-
         public static async Task<int> Execute(ExportOptions options)
         {
+            if(!LoggingHelper.ConfigureLogging(options.LogLevel)) { return (int)ExitCode.LoggingInitError; }
             TextWriter errorWriter = Console.Error;
+            Log.Information("Export command started");
+            Log.Debug("Parameters: {@params}", options);
 
             (string username, string password, int code) = await CredentialsHelper.GetUsernameAndPassword(options);
             if (code != 0)
@@ -36,6 +39,7 @@ namespace mktool.Commands
 
             Debug.Assert(options.Address != null);
 
+            Log.Information("Connecting to mikrotik");
             ITikConnection? connection;
             try
             {
@@ -48,6 +52,8 @@ namespace mktool.Commands
             }
 
             Debug.Assert(connection != null);
+
+            Log.Information("Retreiving dhcp");
             IEnumerable<ITikSentence> dhcp;
             try
             {
@@ -59,25 +65,31 @@ namespace mktool.Commands
                 return (int)ExitCode.MikrotikConnectionError;
             }
 
+            Log.Verbose("Dhcp response: {@response}", dhcp);
             List<Record> result = new List<Record>();
 
             foreach (ITikSentence item in dhcp)
             {
                 if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false"))
                 {
+                    Log.Verbose("Tik dhcp record discraded: {@ITikSentence}", item);
                     continue;
                 }
 
-                result.Add(new Record
+                Log.Verbose("Tik dhcp record processing: {@ITikSentence}", item);
+                Record record = new Record
                 {
                     IP = item.Words["address"],
                     DhcpLabel = item.Words["comment"],
                     Mac = item.Words["mac-address"],
                     DhcpServer = item.Words["server"],
                     HasDhcp = true
-                });
+                };
+                result.Add(record);
+                Log.Verbose("Mktool record added: {@record}", record);
             }
 
+            Log.Information("Retreiving dns");
             IEnumerable<ITikSentence> dns;
             try
             {
@@ -89,10 +101,13 @@ namespace mktool.Commands
                 return (int)ExitCode.MikrotikConnectionError;
             }
 
+            Log.Verbose("Dns response: {@response}", dns);
+
             foreach (ITikSentence item in dns)
             {
                 if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false") || ((item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))))
                 {
+                    Log.Verbose("Tik dns record discraded: {@ITikSentence}", item);
                     continue;
                 }
 
@@ -103,7 +118,9 @@ namespace mktool.Commands
 
                 if (item.Words["type"] == "A")
                 {
+                    Log.Verbose("Tik dns record processing (type A): {@ITikSentence}", item);
                     List<Record> matches = result.Where(r => string.Compare(r.IP, item.Words["address"], true) == 0).ToList();
+                    Log.Verbose("Matches found: {@records}", matches);
                     if (matches.Count > 1)
                     {
                         throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same IP ${item.Words["address"]}. We do not know how to process it.");
@@ -118,6 +135,7 @@ namespace mktool.Commands
                         };
                         result.Add(record);
                         ApplyName(item, record);
+                        Log.Verbose("Mktool record added: {@record}", record);
                     }
                     else
                     {                        
@@ -125,10 +143,12 @@ namespace mktool.Commands
                         record.HasDns = true;
                         record.DnsType = "A";
                         ApplyName(item, record);
+                        Log.Verbose("Mktool record updated: {@record}", record);
                     }
                 }
                 if (item.Words["type"] == "CNAME")
                 {
+                    Log.Verbose("Tik dns record processing (type CNAME): {@ITikSentence}", item);
                     Record record = new Record
                     {
                         DnsCName = item.Words["cname"],
@@ -137,9 +157,11 @@ namespace mktool.Commands
                     };
                     result.Add(record);
                     ApplyName(item, record);
+                    Log.Verbose("Mktool record added: {@record}", record);
                 }
             }
 
+            Log.Information("Retreiving wifi");
             IEnumerable<ITikSentence> wifi;
             try
             {
@@ -151,34 +173,49 @@ namespace mktool.Commands
                 return (int)ExitCode.MikrotikConnectionError;
             }
 
+            Log.Verbose("Wifi response: {@response}", wifi);
+
             foreach (ITikSentence item in wifi)
             {
                 if (!item.Words.ContainsKey(".id"))
                 {
+                    Log.Verbose("Tik wifi record discraded: {@ITikSentence}", item);
                     continue;
                 }
 
+                Log.Verbose("Tik wifi record processing: {@ITikSentence}", item);
                 List<Record> matches = result.Where(r => string.Compare(r.Mac, item.Words["mac-address"], true) == 0).ToList();
+                Log.Verbose("Matches found: {@records}", matches);
                 if (matches.Count > 1)
                 {
                     throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same MAC address {item.Words["mac-address"]}. We do not know how to process it.");
                 }
                 if (matches.Count == 0)
                 {
-                    result.Add(new Record
+                    Record record = new Record
                     {
                         DnsHostName = item.Words["comment"],
                         Mac = item.Words["mac-address"],
                         HasWifi = true
-                    });
+                    };
+                    result.Add(record);
+                    Log.Verbose("Mktool record added: {@record}", record);
                 }
                 else
                 {
                     Record record = matches[0];
                     record.HasWifi = true;
+                    Log.Verbose("Mktool record updated: {@record}", record);
                 }
             }
 
+            Log.Debug("Sorting");
+
+            IEnumerable<Record>? withIp = result.Where(r => r.IP != null);
+            IEnumerable<Record>? withoutIp = result.Where(r => r.IP == null);
+            List<Record>? sorted = withIp.OrderBy(r => { Debug.Assert(r.IP != null); return Version.Parse(r.IP); }).Concat(withoutIp).ToList();
+
+            Log.Information("Opening output");
             TextWriter output;
             if (options.File == null)
             {
@@ -197,10 +234,7 @@ namespace mktool.Commands
                 }
             }
 
-            IEnumerable<Record>? withIp = result.Where(r => r.IP != null);
-            IEnumerable<Record>? withoutIp = result.Where(r => r.IP == null);
-            List<Record>? sorted = withIp.OrderBy(r => { Debug.Assert(r.IP != null); return Version.Parse(r.IP); }).Concat(withoutIp).ToList();
-
+            Log.Information("Writng output");
             switch (options.Format)
             {
                 case "csv":
@@ -236,7 +270,6 @@ namespace mktool.Commands
                 default:
                     throw new ApplicationException($"Unexpected file format {options.Format}");
             }
-
 
             return 0;
         }

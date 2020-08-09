@@ -1,4 +1,6 @@
 ﻿using mktool.CommandLine;
+using Serilog;
+using Serilog.Events;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -11,6 +13,7 @@ namespace mktool.Utility
     {
         public static async Task<(string username, string password, int code)> GetUsernameAndPassword(RootOptions options)
         {
+            Log.Information("Retreiving username and password from Vault");
             TextWriter errorWriter = Console.Error;
             try
             {
@@ -41,34 +44,41 @@ namespace mktool.Utility
             }
             catch (VaultRequestException ex)
             {
+                Log.Error(ex,"Error");
                 errorWriter.WriteLine(ex.Message);
                 if (options.VaultDiag)
                 {
+                    Log.Debug("Response: {response}", ex.Response);
                     errorWriter.WriteLine(ex.Response);
                 }
                 return (string.Empty, string.Empty, (int)ExitCode.VaultRequestError);
             }
             catch (VaultNoAddressException ex)
             {
+                Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
                 return (string.Empty, string.Empty, (int)ExitCode.VaultMissingAddress);
             }
             catch (VaultMissingKeyException ex)
             {
+                Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
                 if (options.VaultDiag)
                 {
+                    Log.Debug("Response: {response}", ex.Response);
                     errorWriter.WriteLine(ex.Response);
                 }
                 return (string.Empty, string.Empty, (int)ExitCode.VaultMissingKey);
             }
             catch (VaultTokenException ex)
             {
+                Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
                 return (string.Empty, string.Empty, (int)ExitCode.VaultMissingToken);
             }
             catch (HttpRequestException ex)
             {
+                Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
                 return (string.Empty, string.Empty, (int)ExitCode.VaultHttpError);
 

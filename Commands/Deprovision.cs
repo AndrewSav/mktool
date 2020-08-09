@@ -1,4 +1,6 @@
 ﻿using mktool.CommandLine;
+using mktool.Utility;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,6 +12,10 @@ namespace mktool.Commands
     {
         public static async Task<int> Execute(DeprovisionOptions options)
         {
+            if (!LoggingHelper.ConfigureLogging(options.LogLevel)) { return (int)ExitCode.LoggingInitError; }
+            Log.Information("Deprovision command started");
+            Log.Debug("Parameters: {@params}", options);
+
             //Console.WriteLine($"The value for --mac-address is: {deprovisionOptions.MacAddress}");
             //Console.WriteLine($"The value for --ip-address is: {deprovisionOptions.IpAddress}");
 

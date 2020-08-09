@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.30309.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "mktool", "mktool.csproj", "{A0BD06AB-0619-4FC6-9085-89F55E63DFB4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.CommandLine", "..\..\..\Users\andrewsav\Documents\GitHub\command-line-api\src\System.CommandLine\System.CommandLine.csproj", "{785EB334-9ED8-445D-91E3-44C1D70F7E50}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{A0BD06AB-0619-4FC6-9085-89F55E63DFB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0BD06AB-0619-4FC6-9085-89F55E63DFB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A0BD06AB-0619-4FC6-9085-89F55E63DFB4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{785EB334-9ED8-445D-91E3-44C1D70F7E50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{785EB334-9ED8-445D-91E3-44C1D70F7E50}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{785EB334-9ED8-445D-91E3-44C1D70F7E50}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{785EB334-9ED8-445D-91E3-44C1D70F7E50}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
