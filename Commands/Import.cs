@@ -55,13 +55,83 @@ namespace mktool.Commands
             IEnumerable<ITikSentence>? dns = Mikrotik.GetDnsRecords(connection);
             ProcessDnsRecords(options, connection, dns, dnsRecords);
 
-            IEnumerable<ITikSentence>? wifi = Mikrotik.GetDhcpRecords(connection);
+            IEnumerable<ITikSentence>? wifi = Mikrotik.GetWifiRecords(connection);
             ProcessWiFiRecords(options, connection, wifi, wifiRecords);
         }
 
         private static void ProcessWiFiRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> wifi, List<Record> wifiRecords)
         {
-            throw new NotImplementedException();
+            foreach (Record record in wifiRecords)
+            {
+                List<ITikSentence> matches = wifi.Where(x => x.Words.Any(y => y.Key == "mac-address" && y.Value == record.Mac))
+                    .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
+                    .ToList();
+
+                if (matches.Count > 1)
+                {
+                    Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+                    Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
+                    string message = $"There are {matches.Count} wifi records with this MAC. Update not attempted";
+                    Log.Warning(message);
+                    Console.WriteLine($"?Warning: message");
+                    continue;
+                }
+                if (matches.Count == 0)
+                {
+                    CreateMikrotikWifiRecord(connection, record, options.Execute, options.ContinueOnErrors);
+                }
+                else
+                {
+                    UpdateMikrotikWifiRecord(connection, matches[0], record, options.Execute, options.ContinueOnErrors);
+
+                }
+            }
+        }
+
+        private static void UpdateMikrotikWifiRecord(ITikConnection connection, ITikSentence existing, Record record, bool execute, bool continueOnErrors)
+        {
+            if (string.IsNullOrWhiteSpace(record.DnsHostName) || existing.Words["comment"] == record.DnsHostName)
+            {
+                Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+                Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
+                return;
+            }
+
+            Console.WriteLine($"^Updating Wifi record. MAC: {record.Mac}");
+            Log.Information("Updating Wifi record. MAC: {MAC}", record.Mac);
+            Console.WriteLine($">comment: {existing.Words["comment"]} => {record.DnsHostName}");
+            Log.Information("comment: {oldValue} => {newValue}", existing.Words["comment"], record.DnsHostName);
+
+            string[] sentence = new[]
+            {
+                "/interface/wireless/access-list/set",
+                $"=comment={record.DnsHostName}",
+                $"=.id={existing.Words[".id"]}",
+            };
+            if (execute)
+            {
+                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
+                ProcessMikrotikResponse(continueOnErrors, result);
+            }
+        }
+
+        private static void CreateMikrotikWifiRecord(ITikConnection connection, Record record, bool execute, bool continueOnErrors)
+        {
+            Console.WriteLine($"+Create Wifi record. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+            Log.Information("Create Wifi record. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
+            string[] sentence = new[]
+            {
+                "/interface/wireless/access-list/add",
+                $"=mac-address={record.Mac}",
+                $"=comment={record.DnsHostName}",
+                $"=authentication=true",
+                $"=forwarding=true",
+            };
+            if (execute)
+            {
+                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
+                ProcessMikrotikResponse(continueOnErrors, result);
+            }
         }
 
         private static void ProcessDnsRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> dns, List<Record> dnsRecords)
@@ -110,10 +180,9 @@ namespace mktool.Commands
                     }
                     else
                     {
-                        UpdateMikrotikDnsRecord(connection, matches[0], record, options.Execute, options.ContinueOnErrors);
+                        ReportDnsRecordExists(record);
                     }
                 }
-
             }
         }
 
@@ -150,57 +219,20 @@ namespace mktool.Commands
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
                 ProcessMikrotikResponse(continueOnErrors, result);
             }
-
         }
 
-        private static void UpdateMikrotikDnsRecord(ITikConnection connection, ITikSentence existing, Record record, bool execute, bool continueOnErrors)
+        private static void ReportDnsRecordExists(Record record)
         {
-            Dictionary<string, string> fieldsToUpdate = new Dictionary<string, string>();
-
-
-            record.IP ??= "";
-            record.DnsCName ??= "";
-            record.DnsType ??= "";
-
-            if (existing.Words[record.GetDnsIdField()] != record.GetDnsId())
-            {
-                fieldsToUpdate.Add(record.GetDnsIdField(), record.GetDnsId());
-            }
-            if (existing.Words["type"] != record.DnsType)
-            {
-                fieldsToUpdate.Add("type", record.DnsType);
-            }
-
             if (string.Compare(record.DnsType, "A", true) == 0)
             {
-                if (existing.Words["address"] != record.IP)
-                {
-                    fieldsToUpdate.Add("address", record.IP);
-                }
+                Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
+                Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.IP);
             }
             else
             {
-                if (existing.Words["cname"] != record.DnsCName)
-                {
-                    fieldsToUpdate.Add("cname", record.DnsCName);
-                }
+                Console.WriteLine($"=DNS CNAME record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
+                Log.Information($"DNS CNAME record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType, record.DnsCName);
             }
-
-            if (fieldsToUpdate.Count == 0)
-            {
-                if (string.Compare(record.DnsType, "A", true) == 0)
-                {
-                    Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
-                    Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.IP);
-                }
-                else
-                {
-                    Console.WriteLine($"=DNS CNAME record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
-                    Log.Information($"DNS CNAME record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType, record.DnsCName);
-                }
-                return;
-            }
-            throw new ApplicationException("bla");
         }
 
         private static void ProcessDhcpRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> dhcp, List<Record> dhcpRecords)
