@@ -11,7 +11,7 @@ namespace mktool.Commands
         public static async Task Execute(ProvisionDnsOptions options)
         {
             LoggingHelper.ConfigureLogging(options.LogLevel);
-            Log.Information("Provision command started");
+            Log.Information("ProvisionDns command started");
             Log.Debug("Parameters: {@params}", options);
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);

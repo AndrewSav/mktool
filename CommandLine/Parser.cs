@@ -263,7 +263,7 @@ namespace mktool.CommandLine
         private static int GetNumberOfOnSwitches(CommandResult commandResult, string[] switchNames)
         {
             int result = 0;
-            foreach(var name in switchNames)            
+            foreach(string? name in switchNames)            
             {
                 if (commandResult.Children.Contains(name))
                 {
@@ -391,9 +391,13 @@ namespace mktool.CommandLine
                     description: "Export format") { Argument = new Argument<string>().FromAmong("toml","yaml","json","csv")},
                 new Option<bool>(
                     new []{ "--execute", "-e" },
-                    description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik."),
+                    description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik"),
+                new Option<bool>(
+                    new []{ "--continue-on-errors", "-k" },
+                    description: "Does not stop execution with a error code when the was a error writing a record to Mikrotik"),
             };
             AddGlobalValidators(command);
+
             command.Handler = CommandHandler.Create<ImportOptions>(async (importOptions) =>
             {
                 return await CommandHandlerWrapper.ExecuteCommandHandler(importOptions, Import.Execute);
@@ -405,15 +409,16 @@ namespace mktool.CommandLine
         private static Command BuildExportCommand()
         {
             Command command = new Command("export", "Export provisioning configuration from Mikrotik")
-                {
-                    new Option<FileInfo>(
-                        new []{ "--file", "-f" },
-                        description: "Write to specified file instead of stdout"),
-                    new Option<string>(
-                        new []{ "--format", "-o" },
-                        description: "Export format") { Argument = new Argument<string>(() => "csv").FromAmong("toml","yaml","json","csv")},
-                };
+            {
+                new Option<FileInfo>(
+                    new []{ "--file", "-f" },
+                    description: "Write to specified file instead of stdout"),
+                new Option<string>(
+                    new []{ "--format", "-o" },
+                    description: "Export format") { Argument = new Argument<string>(() => "csv").FromAmong("toml","yaml","json","csv")},
+            };
             AddGlobalValidators(command);
+
             command.Handler = CommandHandler.Create<ExportOptions>(async (exportOptions) =>
             {
                 return await CommandHandlerWrapper.ExecuteCommandHandler(exportOptions, Export.Execute);

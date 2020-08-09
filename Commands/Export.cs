@@ -19,11 +19,6 @@ namespace mktool.Commands
 {
     static class Export
     {
-        class TomlWrapper
-        {
-            public Record[]? Record { get; set; }
-        }
-
         public static async Task Execute(ExportOptions options)
         {
             LoggingHelper.ConfigureLogging(options.LogLevel);
@@ -32,11 +27,11 @@ namespace mktool.Commands
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
 
-            IEnumerable<ITikSentence> dhcp = Mikrotik.CallMikrotik(connection, new[] { "/ip/dhcp-server/lease/print" });
+            IEnumerable<ITikSentence> dhcp = Mikrotik.GetDhcpRecords(connection);
             List<Record> result = ProcessDhcpRecords(dhcp);
-            IEnumerable<ITikSentence> dns = Mikrotik.CallMikrotik(connection, new[] { "/ip/dns/static/print" });
+            IEnumerable<ITikSentence> dns = Mikrotik.GetDnsRecords(connection);
             MergeDnsRecords(result, dns);
-            IEnumerable<ITikSentence> wifi = Mikrotik.CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
+            IEnumerable<ITikSentence> wifi = Mikrotik.GetWifiRecords(connection);
             MergeWiFiRecords(result, wifi);
 
             List<Record> sorted = SortRecords(result);
@@ -67,31 +62,6 @@ namespace mktool.Commands
                     throw new ApplicationException($"Unexpected file format {format}");
             }
         }
-
-        private static void WriteTomlExportWrapper(string? fileName, List<Record> sorted, TextWriter output)
-        {
-            Stream stream;
-            if (fileName == null)
-            {
-                TomlWrapper t = new TomlWrapper { Record = sorted.ToArray() };
-                Console.Write(Toml.WriteString(t));
-            }
-            else
-            {
-                try
-                {
-                    output.Close();
-                    stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine(ex.Message);
-                    throw new MktoolException("Error", ExitCode.FileWriteError);
-                }
-                WriteTomlExport(stream, sorted.ToArray());
-            }
-        }
-
         private static TextWriter CreateOutputWriter(string? fileName)
         {
             Log.Information("Opening output");
@@ -259,15 +229,39 @@ namespace mktool.Commands
             using (JsonWriter writer = new JsonTextWriter(output))
             {
                 serializer.Serialize(writer, sorted);
+                output.Flush();
             }
-            output.Flush();
         }
 
         private static void WriteYamlExport(TextWriter output, List<Record> sorted)
         {
-            var serializer = new SerializerBuilder().Build();
+            YamlDotNet.Serialization.ISerializer? serializer = new SerializerBuilder().Build();
             serializer.Serialize(output, sorted);
             output.Flush();
+        }
+
+        private static void WriteTomlExportWrapper(string? fileName, List<Record> sorted, TextWriter output)
+        {
+            Stream stream;
+            if (fileName == null)
+            {
+                TomlWrapper t = new TomlWrapper { Record = sorted.ToArray() };
+                Console.Write(Toml.WriteString(t));
+            }
+            else
+            {
+                try
+                {
+                    output.Close();
+                    stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    throw new MktoolException("Error", ExitCode.FileWriteError);
+                }
+                WriteTomlExport(stream, sorted.ToArray());
+            }
         }
 
         private static void WriteTomlExport(Stream stream, Record[] sorted)

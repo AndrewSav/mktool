@@ -47,5 +47,19 @@ namespace mktool.Utility
             Log.Verbose("Response: {@response}", response);
             return response;
         }
+        public static IEnumerable<ITikSentence> GetDhcpRecords(ITikConnection? connection)
+        {
+            return CallMikrotik(connection, new[] { "/ip/dhcp-server/lease/print" });
+
+        }
+        public static IEnumerable<ITikSentence> GetDnsRecords(ITikConnection? connection)
+        {
+            return CallMikrotik(connection, new[] { "/ip/dns/static/print" });
+
+        }
+        public static IEnumerable<ITikSentence> GetWifiRecords(ITikConnection? connection)
+        {
+            return CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
+        }
     }
 }

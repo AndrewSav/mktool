@@ -24,6 +24,7 @@ namespace mktool.Utility
                 File.Delete(LogFile);
                 Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Is(Enum.Parse<LogEventLevel>(level, true))
+                    .Destructure.AsScalar(typeof(FileInfo))
                     .WriteTo.File(LogFile)
                     .CreateLogger();
                 Log.Information("Logging system initialized");

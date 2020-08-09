@@ -7,6 +7,7 @@ namespace mktool.CommandLine
         public FileInfo? File { get; set; }
         public string? Format { get; set; }
         public bool Execute { get; set; }
+        public bool ContinueOnErrors { get; set; }
 
     }
 }

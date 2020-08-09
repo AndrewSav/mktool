@@ -2,13 +2,17 @@
 {
     enum ExitCode
     {
-        VaultRequestError = 1,
-        VaultMissingAddress = 2,
-        VaultMissingKey = 3,
-        VaultMissingToken = 4,
-        VaultHttpError = 5,
-        MikrotikConnectionError = 6,
-        FileWriteError = 7,
-        LoggingInitError = 8
+        VaultRequestError = 2,
+        VaultMissingAddress = 3,
+        VaultMissingKey = 4,
+        VaultMissingToken = 5,
+        VaultHttpError = 6,
+        MikrotikConnectionError = 7,
+        FileWriteError = 8,
+        LoggingInitError = 9,
+        MissingFormat = 10,
+        ImportFileError = 11,
+        ValidationError = 12,
+        MikrotikWriteError = 13
     }
 }
