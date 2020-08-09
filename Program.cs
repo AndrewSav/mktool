@@ -14,7 +14,8 @@ namespace mktool
             try
             {
                 return await Parser.InvokeAsync(args);
-            } catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 HandleUnhandledException(ex);
                 return 127;

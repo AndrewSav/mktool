@@ -11,5 +11,9 @@ namespace mktool.Utility
 		public VaultTokenException(string message, Exception innerException) : base(message, innerException)
 		{
 		}
-	}
+
+        public VaultTokenException()
+        {
+        }
+    }
 }

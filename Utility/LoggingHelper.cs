@@ -32,7 +32,7 @@ namespace mktool.Utility
             catch (Exception ex)
             {
                 Console.Error.Write(ex.Message);
-                throw new MktoolException("Error", ExitCode.LoggingInitError);
+                throw new MktoolException( ExitCode.LoggingInitError);
             }
         }
     }

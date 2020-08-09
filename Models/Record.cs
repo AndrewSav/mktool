@@ -43,7 +43,6 @@ namespace mktool.Models
 			Record result = (Record)MemberwiseClone();
 			foreach (var property in GetType().GetProperties())
 			{
-				var propertyType = property.PropertyType;
 				var value = property.GetValue(result, null);
 				if (value is string s && string.IsNullOrWhiteSpace(s))
 				{

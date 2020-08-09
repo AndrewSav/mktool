@@ -4,7 +4,7 @@ namespace mktool.Utility
 {
     class VaultDataException : Exception
 	{
-		public VaultDataException(string message, string response) : base(message)
+        public VaultDataException(string message, string response) : base(message)
 		{
 			Response = response;
 		}
@@ -15,5 +15,5 @@ namespace mktool.Utility
 		}
 
 		public string Response { get; }
-	}
+    }
 }

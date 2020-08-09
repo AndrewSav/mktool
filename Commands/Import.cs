@@ -44,7 +44,7 @@ namespace mktool.Commands
             List<Record> wifiRecords = records.Where(x => x.HasWiFi).ToList();
             if (!ValidateDhcpRecords(dhcpRecords) ||!ValidateDnsRecords(dnsRecords))
             {
-                throw new MktoolException("Error", ExitCode.ValidationError);
+                throw new MktoolException( ExitCode.ValidationError);
             }
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
@@ -117,7 +117,7 @@ namespace mktool.Commands
             if (options.Execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(options.ContinueOnErrors, result);
+                Mikrotik.ProcessResponse(options.ContinueOnErrors, result);
             }
         }
 
@@ -136,7 +136,7 @@ namespace mktool.Commands
             if (execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(continueOnErrors, result);
+                Mikrotik.ProcessResponse(continueOnErrors, result);
             }
         }
 
@@ -223,7 +223,7 @@ namespace mktool.Commands
             if (execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(continueOnErrors, result);
+                Mikrotik.ProcessResponse(continueOnErrors, result);
             }
         }
 
@@ -323,7 +323,7 @@ namespace mktool.Commands
             if (execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(continueOnErrors, result);
+                Mikrotik.ProcessResponse(continueOnErrors, result);
             }
         }
 
@@ -383,23 +383,7 @@ namespace mktool.Commands
             if (options.Execute)
             {
                 IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                ProcessMikrotikResponse(options.ContinueOnErrors, result);
-            }
-        }
-
-        private static void ProcessMikrotikResponse(bool continueOnErrors, IEnumerable<ITikSentence> result)
-        {
-            foreach (var responseSentence in result)
-            {
-                if (responseSentence is ITikTrapSentence trap)
-                {
-                    Console.Error.WriteLine($"!Error: {trap.Message}");
-                    Log.Error(trap.Message);
-                    if (!continueOnErrors)
-                    {
-                        throw new MktoolException("Error", ExitCode.MikrotikWriteError);
-                    }
-                }
+                Mikrotik.ProcessResponse(options.ContinueOnErrors, result);
             }
         }
 
@@ -478,19 +462,14 @@ namespace mktool.Commands
         private static List<Record> ReadRecords(string fileName, string format)
         {
             Log.Information("Reading export file");
-            switch (format)
+            return format switch
             {
-                case "csv":
-                    return ReadCsvExport(fileName);
-                case "toml":
-                    return ReadTomlExport(fileName);
-                case "yaml":
-                    return ReadYamlExport(fileName);
-                case "json":
-                    return ReadJsonExport(fileName);
-                default:
-                    throw new ApplicationException($"Unexpected file format {format}");
-            }
+                "csv" => ReadCsvExport(fileName),
+                "toml" => ReadTomlExport(fileName),
+                "yaml" => ReadYamlExport(fileName),
+                "json" => ReadJsonExport(fileName),
+                _ => throw new ApplicationException($"Unexpected file format {format}"),
+            };
         }
 
         private static List<Record> ReadJsonExport(string fileName)
@@ -503,7 +482,7 @@ namespace mktool.Commands
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.ImportFileError);
+                throw new MktoolException( ExitCode.ImportFileError);
             }
             Log.Verbose("Json deserialization result: {@result}", result);
             return result;
@@ -521,7 +500,7 @@ namespace mktool.Commands
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.ImportFileError);
+                throw new MktoolException( ExitCode.ImportFileError);
             }
             Log.Verbose("Yaml deserialization result: {@result}", result);
             return result;
@@ -537,7 +516,7 @@ namespace mktool.Commands
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.ImportFileError);
+                throw new MktoolException( ExitCode.ImportFileError);
             }
             Log.Verbose("Toml deserialization result: {@result}", result);
             return result;
@@ -548,16 +527,14 @@ namespace mktool.Commands
             List<Record> result;
             try
             {
-                using (StreamReader? reader = new StreamReader(fileName))
-                using (CsvReader? csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-                {
-                    result = csv.GetRecords<Record>().ToList();
-                }
+                using StreamReader? reader = new StreamReader(fileName);
+                using CsvReader? csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                result = csv.GetRecords<Record>().ToList();
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.ImportFileError);
+                throw new MktoolException( ExitCode.ImportFileError);
             }
             Log.Verbose("Csv deserialization result: {@result}", result);
             return result;
@@ -572,7 +549,7 @@ namespace mktool.Commands
             if (!supportedExtensions.Contains(extension))
             {
                 Console.Error.WriteLine("You have not specified import format, and the file you specified does not have any of the supported format extenstions");
-                throw new MktoolException("Error", ExitCode.MissingFormat);
+                throw new MktoolException( ExitCode.MissingFormat);
             }
             return extension == "yml" ? "yaml" : extension;
         }

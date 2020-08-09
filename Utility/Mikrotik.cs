@@ -25,7 +25,7 @@ namespace mktool.Utility
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex);
-                throw new MktoolException("Error", ExitCode.MikrotikConnectionError);
+                throw new MktoolException( ExitCode.MikrotikConnectionError);
             }
             return connection;
         }
@@ -42,7 +42,7 @@ namespace mktool.Utility
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex);
-                throw new MktoolException("Error", ExitCode.MikrotikConnectionError);
+                throw new MktoolException( ExitCode.MikrotikConnectionError);
             }
             Log.Verbose("Response: {@response}", response);
             return response;
@@ -60,6 +60,22 @@ namespace mktool.Utility
         public static IEnumerable<ITikSentence> GetWifiRecords(ITikConnection? connection)
         {
             return CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
+        }
+
+        public static void ProcessResponse(bool continueOnErrors, IEnumerable<ITikSentence> result)
+        {
+            foreach (var responseSentence in result)
+            {
+                if (responseSentence is ITikTrapSentence trap)
+                {
+                    Console.Error.WriteLine($"!Error: {trap.Message}");
+                    Log.Error(trap.Message);
+                    if (!continueOnErrors)
+                    {
+                        throw new MktoolException( ExitCode.MikrotikWriteError);
+                    }
+                }
+            }
         }
     }
 }

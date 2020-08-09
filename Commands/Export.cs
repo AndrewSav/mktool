@@ -79,7 +79,7 @@ namespace mktool.Commands
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine(ex.Message);
-                    throw new MktoolException("Error", ExitCode.FileWriteError);
+                    throw new MktoolException( ExitCode.FileWriteError);
                 }
             }
 
@@ -223,14 +223,14 @@ namespace mktool.Commands
 
         private static void WriteJsonExport(TextWriter output, List<Record> sorted)
         {
-            JsonSerializer serializer = new JsonSerializer();
-            serializer.Formatting = Formatting.Indented;
-            serializer.NullValueHandling = NullValueHandling.Ignore;
-            using (JsonWriter writer = new JsonTextWriter(output))
+            JsonSerializer serializer = new JsonSerializer
             {
-                serializer.Serialize(writer, sorted);
-                output.Flush();
-            }
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            using JsonWriter writer = new JsonTextWriter(output);
+            serializer.Serialize(writer, sorted);
+            output.Flush();
         }
 
         private static void WriteYamlExport(TextWriter output, List<Record> sorted)
@@ -258,7 +258,7 @@ namespace mktool.Commands
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine(ex.Message);
-                    throw new MktoolException("Error", ExitCode.FileWriteError);
+                    throw new MktoolException( ExitCode.FileWriteError);
                 }
                 WriteTomlExport(stream, sorted.ToArray());
             }
@@ -273,10 +273,8 @@ namespace mktool.Commands
 
         private static void WriteCsvExport(TextWriter output, List<Record> sorted)
         {
-            using (CsvWriter? csv = new CsvWriter(output, CultureInfo.InvariantCulture))
-            {
-                csv.WriteRecords(sorted);
-            }
+            using CsvWriter? csv = new CsvWriter(output, CultureInfo.InvariantCulture);
+            csv.WriteRecords(sorted);
         }
 
         private static void ApplyName(ITikSentence item, Record record)

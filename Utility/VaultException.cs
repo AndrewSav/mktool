@@ -4,6 +4,9 @@ namespace mktool.Utility
 {
     class VaultException : Exception
     {
+        public VaultException()
+        {
+        }
         public VaultException(string message) : base(message)
         {
         }

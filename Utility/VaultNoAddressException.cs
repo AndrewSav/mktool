@@ -11,5 +11,9 @@ namespace mktool.Utility
         public VaultNoAddressException(string message, Exception innerException) : base(message, innerException)
         {
         }
+
+        public VaultNoAddressException()
+        {
+        }
     }
 }

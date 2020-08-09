@@ -48,13 +48,13 @@ namespace mktool.Utility
                     Log.Debug("Response: {response}", ex.Response);
                     Console.Error.WriteLine(ex.Response);
                 }
-                throw new MktoolException("Error", ExitCode.VaultRequestError);
+                throw new MktoolException( ExitCode.VaultRequestError);
             }
             catch (VaultNoAddressException ex)
             {
                 Log.Error(ex, "Error");
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.VaultMissingAddress);
+                throw new MktoolException( ExitCode.VaultMissingAddress);
             }
             catch (VaultMissingKeyException ex)
             {
@@ -65,19 +65,19 @@ namespace mktool.Utility
                     Log.Debug("Response: {response}", ex.Response);
                     Console.Error.WriteLine(ex.Response);
                 }
-                throw new MktoolException("Error", ExitCode.VaultMissingKey);
+                throw new MktoolException( ExitCode.VaultMissingKey);
             }
             catch (VaultTokenException ex)
             {
                 Log.Error(ex, "Error");
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.VaultMissingToken);
+                throw new MktoolException( ExitCode.VaultMissingToken);
             }
             catch (HttpRequestException ex)
             {
                 Log.Error(ex, "Error");
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException("Error", ExitCode.VaultHttpError);
+                throw new MktoolException( ExitCode.VaultHttpError);
 
             }
         }
