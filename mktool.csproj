@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <None Remove="Commands\Deprovision.cs~RF2ec5cebd.TMP" />
+    <None Remove="Utility\CredentialsHelper.cs~RFf87420.TMP" />
   </ItemGroup>
 
   <ItemGroup>

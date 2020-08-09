@@ -12,7 +12,7 @@ namespace mktool.Commands
     {
         public static async Task<int> Execute(ImportOptions options)
         {
-            if (!LoggingHelper.ConfigureLogging(options.LogLevel)) { return (int)ExitCode.LoggingInitError; }
+            LoggingHelper.ConfigureLogging(options.LogLevel);
             Log.Information("Import command started");
             Log.Debug("Parameters: {@params}", options);
             return 0;

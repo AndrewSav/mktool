@@ -9,7 +9,7 @@ namespace mktool.Utility
     {
         public static string LogFile { get => "mktool.log"; }
 
-        public static bool ConfigureLogging(string? level)
+        public static void ConfigureLogging(string? level)
         {
             if (level == null)
             {
@@ -17,7 +17,7 @@ namespace mktool.Utility
                 Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Fatal()
                     .CreateLogger();
-                return true;
+                return;
             }
             try
             { 
@@ -27,13 +27,12 @@ namespace mktool.Utility
                     .WriteTo.File(LogFile)
                     .CreateLogger();
                 Log.Information("Logging system initialized");
-                return true;
             }
             catch (Exception ex)
             {
                 TextWriter errorWriter = Console.Error;
                 errorWriter.Write(ex.Message);
-                return false;
+                throw new MktoolException("Error", ExitCode.LoggingInitError);
             }
         }
     }

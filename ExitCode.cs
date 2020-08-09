@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace mktool
+﻿namespace mktool
 {
     enum ExitCode
     {
         VaultRequestError = 1,
-        VaultMissingAddress,
-        VaultMissingKey,
-        VaultMissingToken,
-        VaultHttpError,
-        MikrotikConnectionError,
-        FileWriteError,
-        LoggingInitError
+        VaultMissingAddress = 2,
+        VaultMissingKey = 3,
+        VaultMissingToken = 4,
+        VaultHttpError = 5,
+        MikrotikConnectionError = 6,
+        FileWriteError = 7,
+        LoggingInitError = 8
     }
 }

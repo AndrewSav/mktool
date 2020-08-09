@@ -11,7 +11,7 @@ namespace mktool.Utility
 {
     class CredentialsHelper
     {
-        public static async Task<(string username, string password, int code)> GetUsernameAndPassword(RootOptions options)
+        public static async Task<(string username, string password)> GetUsernameAndPassword(RootOptions options)
         {
             Log.Information("Retreiving username and password from Vault");
             TextWriter errorWriter = Console.Error;
@@ -40,7 +40,7 @@ namespace mktool.Utility
                     Debug.Assert(options.VaultPasswordKey != null);
                     password = await Vault.GetVaultValue(options.VaultPasswordLocation, options.VaultPasswordKey, options.VaultAddress);
                 }
-                return (username, password, 0);
+                return (username, password);
             }
             catch (VaultRequestException ex)
             {
@@ -51,13 +51,13 @@ namespace mktool.Utility
                     Log.Debug("Response: {response}", ex.Response);
                     errorWriter.WriteLine(ex.Response);
                 }
-                return (string.Empty, string.Empty, (int)ExitCode.VaultRequestError);
+                throw new MktoolException("Error", ExitCode.VaultRequestError);
             }
             catch (VaultNoAddressException ex)
             {
                 Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
-                return (string.Empty, string.Empty, (int)ExitCode.VaultMissingAddress);
+                throw new MktoolException("Error", ExitCode.VaultMissingAddress);
             }
             catch (VaultMissingKeyException ex)
             {
@@ -68,19 +68,19 @@ namespace mktool.Utility
                     Log.Debug("Response: {response}", ex.Response);
                     errorWriter.WriteLine(ex.Response);
                 }
-                return (string.Empty, string.Empty, (int)ExitCode.VaultMissingKey);
+                throw new MktoolException("Error", ExitCode.VaultMissingKey);
             }
             catch (VaultTokenException ex)
             {
                 Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
-                return (string.Empty, string.Empty, (int)ExitCode.VaultMissingToken);
+                throw new MktoolException("Error", ExitCode.VaultMissingToken);
             }
             catch (HttpRequestException ex)
             {
                 Log.Error(ex, "Error");
                 errorWriter.WriteLine(ex.Message);
-                return (string.Empty, string.Empty, (int)ExitCode.VaultHttpError);
+                throw new MktoolException("Error", ExitCode.VaultHttpError);
 
             }
         }

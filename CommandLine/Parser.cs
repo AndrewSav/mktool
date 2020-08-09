@@ -416,7 +416,7 @@ namespace mktool.CommandLine
             AddGlobalValidators(command);
             command.Handler = CommandHandler.Create<ExportOptions>(async (exportOptions) =>
             {
-                return await Export.Execute(exportOptions);
+                return await CommandHandlerWrapper.ExecuteCommandHandler(exportOptions, Export.Execute);
             });
             return command;
         }

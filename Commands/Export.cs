@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using tik4net;
 using YamlDotNet.Serialization;
@@ -24,48 +25,17 @@ namespace mktool.Commands
             public Record[]? Record { get; set; }
         }
 
-        public static async Task<int> Execute(ExportOptions options)
+        public static async Task Execute(ExportOptions options)
         {
-            if(!LoggingHelper.ConfigureLogging(options.LogLevel)) { return (int)ExitCode.LoggingInitError; }
+            LoggingHelper.ConfigureLogging(options.LogLevel);
             TextWriter errorWriter = Console.Error;
             Log.Information("Export command started");
             Log.Debug("Parameters: {@params}", options);
 
-            (string username, string password, int code) = await CredentialsHelper.GetUsernameAndPassword(options);
-            if (code != 0)
-            {
-                return code;
-            }
+            ITikConnection connection = await Mikrotik.ConnectAsync(options);
 
-            Debug.Assert(options.Address != null);
+            IEnumerable<ITikSentence> dhcp = Mikrotik.CallMikrotik(connection, new[] { "/ip/dhcp-server/lease/print" });
 
-            Log.Information("Connecting to mikrotik");
-            ITikConnection? connection;
-            try
-            {
-                connection = ConnectionFactory.OpenConnection(TikConnectionType.Api, options.Address, username, password);
-            } 
-            catch (Exception ex)
-            {
-                errorWriter.WriteLine(ex);
-                return (int)ExitCode.MikrotikConnectionError;
-            }
-
-            Debug.Assert(connection != null);
-
-            Log.Information("Retreiving DHCP");
-            IEnumerable<ITikSentence> dhcp;
-            try
-            {
-                dhcp = connection.CallCommandSync(new[] { "/ip/dhcp-server/lease/print" });
-            }
-            catch (Exception ex)
-            {
-                errorWriter.WriteLine(ex);
-                return (int)ExitCode.MikrotikConnectionError;
-            }
-
-            Log.Verbose("Dhcp response: {@response}", dhcp);
             List<Record> result = new List<Record>();
 
             foreach (ITikSentence item in dhcp)
@@ -89,19 +59,7 @@ namespace mktool.Commands
                 Log.Verbose("Mktool record added: {@record}", record);
             }
 
-            Log.Information("Retreiving DNS");
-            IEnumerable<ITikSentence> dns;
-            try
-            {
-                dns = connection.CallCommandSync(new[] { "/ip/dns/static/print" });
-            }
-            catch (Exception ex)
-            {
-                errorWriter.WriteLine(ex);
-                return (int)ExitCode.MikrotikConnectionError;
-            }
-
-            Log.Verbose("Dns response: {@response}", dns);
+            IEnumerable<ITikSentence> dns = Mikrotik.CallMikrotik(connection, new[] { "/ip/dns/static/print" });
 
             foreach (ITikSentence item in dns)
             {
@@ -161,21 +119,9 @@ namespace mktool.Commands
                 }
             }
 
-            Log.Information("Retreiving WiFi");
-            IEnumerable<ITikSentence> WiFi;
-            try
-            {
-                WiFi = connection.CallCommandSync(new[] { "/interface/wireless/access-list/print" });
-            }
-            catch (Exception ex)
-            {
-                errorWriter.WriteLine(ex);
-                return (int)ExitCode.MikrotikConnectionError;
-            }
+            IEnumerable<ITikSentence> wifi = Mikrotik.CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
 
-            Log.Verbose("WiFi response: {@response}", WiFi);
-
-            foreach (ITikSentence item in WiFi)
+            foreach (ITikSentence item in wifi)
             {
                 if (!item.Words.ContainsKey(".id"))
                 {
@@ -230,7 +176,7 @@ namespace mktool.Commands
                 catch(Exception ex)
                 {
                     errorWriter.WriteLine(ex.Message);
-                    return (int)ExitCode.FileWriteError;
+                    throw new MktoolException("Error", ExitCode.FileWriteError);
                 }
             }
 
@@ -256,7 +202,7 @@ namespace mktool.Commands
                         } catch (Exception ex)
                         {
                             errorWriter.WriteLine(ex.Message);
-                            return (int)ExitCode.FileWriteError;
+                            throw new MktoolException("Error", ExitCode.FileWriteError);
                         }
                         WriteTomlExport(stream, sorted.ToArray());
                     }
@@ -271,7 +217,6 @@ namespace mktool.Commands
                     throw new ApplicationException($"Unexpected file format {options.Format}");
             }
 
-            return 0;
         }
 
         private static void WriteJsonExport(TextWriter output, List<Record> sorted)
