@@ -1,21 +1,21 @@
 ﻿using mktool.CommandLine;
 using mktool.Utility;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
+using tik4net;
 
 namespace mktool.Commands
 {
     static class ProvisionDhcp
     {
-        public static async Task<int> Execute(ProvisionDhcpOptions options)
+        public static async Task Execute(ProvisionDhcpOptions options)
         {
             LoggingHelper.ConfigureLogging(options.LogLevel);
             Log.Information("Provision command started");
             Log.Debug("Parameters: {@params}", options);
-            return 0;
+
+            ITikConnection connection = await Mikrotik.ConnectAsync(options);
+
         }
     }
 }

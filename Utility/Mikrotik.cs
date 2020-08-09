@@ -3,7 +3,6 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading.Tasks;
 using tik4net;
 
@@ -13,7 +12,6 @@ namespace mktool.Utility
     {
         public static async Task<ITikConnection> ConnectAsync(RootOptions options)
         {
-            TextWriter errorWriter = Console.Error;
             (string username, string password) = await CredentialsHelper.GetUsernameAndPassword(options);
 
             Debug.Assert(options.Address != null);
@@ -26,7 +24,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                errorWriter.WriteLine(ex);
+                Console.Error.WriteLine(ex);
                 throw new MktoolException("Error", ExitCode.MikrotikConnectionError);
             }
             return connection;
@@ -35,7 +33,6 @@ namespace mktool.Utility
         public static IEnumerable<ITikSentence> CallMikrotik(ITikConnection? connection, string[] request)
         {
             Debug.Assert(connection != null);
-            TextWriter errorWriter = Console.Error;
             Log.Information("Executing microtik call {@request}", request);
             IEnumerable<ITikSentence> response;
             try
@@ -44,7 +41,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                errorWriter.WriteLine(ex);
+                Console.Error.WriteLine(ex);
                 throw new MktoolException("Error", ExitCode.MikrotikConnectionError);
             }
             Log.Verbose("Response: {@response}", response);

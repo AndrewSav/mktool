@@ -30,8 +30,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                TextWriter errorWriter = Console.Error;
-                errorWriter.Write(ex.Message);
+                Console.Error.Write(ex.Message);
                 throw new MktoolException("Error", ExitCode.LoggingInitError);
             }
         }

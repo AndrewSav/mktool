@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security;
 using System.Threading.Tasks;
 using tik4net;
 using YamlDotNet.Serialization;
@@ -28,39 +27,143 @@ namespace mktool.Commands
         public static async Task Execute(ExportOptions options)
         {
             LoggingHelper.ConfigureLogging(options.LogLevel);
-            TextWriter errorWriter = Console.Error;
             Log.Information("Export command started");
             Log.Debug("Parameters: {@params}", options);
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
 
             IEnumerable<ITikSentence> dhcp = Mikrotik.CallMikrotik(connection, new[] { "/ip/dhcp-server/lease/print" });
+            List<Record> result = ProcessDhcpRecords(dhcp);
+            IEnumerable<ITikSentence> dns = Mikrotik.CallMikrotik(connection, new[] { "/ip/dns/static/print" });
+            MergeDnsRecords(result, dns);
+            IEnumerable<ITikSentence> wifi = Mikrotik.CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
+            MergeWiFiRecords(result, wifi);
 
-            List<Record> result = new List<Record>();
+            List<Record> sorted = SortRecords(result);
+            TextWriter output = CreateOutputWriter(options.File?.FullName);
+            Debug.Assert(options.Format != null);
+            WriteOutput(options.File?.FullName, options.Format, sorted, output);
 
-            foreach (ITikSentence item in dhcp)
+        }
+
+        private static void WriteOutput(string? fileName, string format, List<Record> sorted, TextWriter output)
+        {
+            Log.Information("Writng output");
+            switch (format)
             {
-                if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false"))
+                case "csv":
+                    WriteCsvExport(output, sorted);
+                    break;
+                case "toml":
+                    WriteTomlExportWrapper(fileName, sorted, output);
+                    break;
+                case "yaml":
+                    WriteYamlExport(output, sorted);
+                    break;
+                case "json":
+                    WriteJsonExport(output, sorted);
+                    break;
+                default:
+                    throw new ApplicationException($"Unexpected file format {format}");
+            }
+        }
+
+        private static void WriteTomlExportWrapper(string? fileName, List<Record> sorted, TextWriter output)
+        {
+            Stream stream;
+            if (fileName == null)
+            {
+                TomlWrapper t = new TomlWrapper { Record = sorted.ToArray() };
+                Console.Write(Toml.WriteString(t));
+            }
+            else
+            {
+                try
                 {
-                    Log.Verbose("Tik dhcp record discraded: {@ITikSentence}", item);
+                    output.Close();
+                    stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    throw new MktoolException("Error", ExitCode.FileWriteError);
+                }
+                WriteTomlExport(stream, sorted.ToArray());
+            }
+        }
+
+        private static TextWriter CreateOutputWriter(string? fileName)
+        {
+            Log.Information("Opening output");
+            TextWriter output;
+            if (fileName == null)
+            {
+                output = Console.Out;
+            }
+            else
+            {
+                try
+                {
+                    output = new StreamWriter(fileName);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    throw new MktoolException("Error", ExitCode.FileWriteError);
+                }
+            }
+
+            return output;
+        }
+
+        private static List<Record> SortRecords(List<Record> result)
+        {
+            Log.Debug("Sorting");
+            IEnumerable<Record>? withIp = result.Where(r => r.IP != null);
+            IEnumerable<Record>? withoutIp = result.Where(r => r.IP == null);
+            List<Record>? sorted = withIp.OrderBy(r => { Debug.Assert(r.IP != null); return Version.Parse(r.IP); }).Concat(withoutIp).ToList();
+            return sorted;
+        }
+
+        private static void MergeWiFiRecords(List<Record> result, IEnumerable<ITikSentence> wifi)
+        {
+            foreach (ITikSentence item in wifi)
+            {
+                if (!item.Words.ContainsKey(".id"))
+                {
+                    Log.Verbose("Tik WiFi record discraded: {@ITikSentence}", item);
                     continue;
                 }
 
-                Log.Verbose("Tik dhcp record processing: {@ITikSentence}", item);
-                Record record = new Record
+                Log.Verbose("Tik WiFi record processing: {@ITikSentence}", item);
+                List<Record> matches = result.Where(r => string.Compare(r.Mac, item.Words["mac-address"], true) == 0).ToList();
+                Log.Verbose("Matches found: {@records}", matches);
+                if (matches.Count > 1)
                 {
-                    IP = item.Words["address"],
-                    DhcpLabel = item.Words["comment"],
-                    Mac = item.Words["mac-address"],
-                    DhcpServer = item.Words["server"],
-                    HasDhcp = true
-                };
-                result.Add(record);
-                Log.Verbose("Mktool record added: {@record}", record);
+                    throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same MAC address {item.Words["mac-address"]}. We do not know how to process it.");
+                }
+                if (matches.Count == 0)
+                {
+                    Record record = new Record
+                    {
+                        DnsHostName = item.Words["comment"],
+                        Mac = item.Words["mac-address"],
+                        HasWiFi = true
+                    };
+                    result.Add(record);
+                    Log.Verbose("Mktool record added: {@record}", record);
+                }
+                else
+                {
+                    Record record = matches[0];
+                    record.HasWiFi = true;
+                    Log.Verbose("Mktool record updated: {@record}", record);
+                }
             }
+        }
 
-            IEnumerable<ITikSentence> dns = Mikrotik.CallMikrotik(connection, new[] { "/ip/dns/static/print" });
-
+        private static void MergeDnsRecords(List<Record> result, IEnumerable<ITikSentence> dns)
+        {
             foreach (ITikSentence item in dns)
             {
                 if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false") || ((item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))))
@@ -96,7 +199,7 @@ namespace mktool.Commands
                         Log.Verbose("Mktool record added: {@record}", record);
                     }
                     else
-                    {                        
+                    {
                         Record record = matches[0];
                         record.HasDns = true;
                         record.DnsType = "A";
@@ -118,105 +221,34 @@ namespace mktool.Commands
                     Log.Verbose("Mktool record added: {@record}", record);
                 }
             }
+        }
 
-            IEnumerable<ITikSentence> wifi = Mikrotik.CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
+        private static List<Record> ProcessDhcpRecords(IEnumerable<ITikSentence> dhcp)
+        {
+            List<Record> result = new List<Record>();
 
-            foreach (ITikSentence item in wifi)
+            foreach (ITikSentence item in dhcp)
             {
-                if (!item.Words.ContainsKey(".id"))
+                if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false"))
                 {
-                    Log.Verbose("Tik WiFi record discraded: {@ITikSentence}", item);
+                    Log.Verbose("Tik dhcp record discraded: {@ITikSentence}", item);
                     continue;
                 }
 
-                Log.Verbose("Tik WiFi record processing: {@ITikSentence}", item);
-                List<Record> matches = result.Where(r => string.Compare(r.Mac, item.Words["mac-address"], true) == 0).ToList();
-                Log.Verbose("Matches found: {@records}", matches);
-                if (matches.Count > 1)
+                Log.Verbose("Tik dhcp record processing: {@ITikSentence}", item);
+                Record record = new Record
                 {
-                    throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same MAC address {item.Words["mac-address"]}. We do not know how to process it.");
-                }
-                if (matches.Count == 0)
-                {
-                    Record record = new Record
-                    {
-                        DnsHostName = item.Words["comment"],
-                        Mac = item.Words["mac-address"],
-                        HasWiFi = true
-                    };
-                    result.Add(record);
-                    Log.Verbose("Mktool record added: {@record}", record);
-                }
-                else
-                {
-                    Record record = matches[0];
-                    record.HasWiFi = true;
-                    Log.Verbose("Mktool record updated: {@record}", record);
-                }
+                    IP = item.Words["address"],
+                    DhcpLabel = item.Words["comment"],
+                    Mac = item.Words["mac-address"],
+                    DhcpServer = item.Words["server"],
+                    HasDhcp = true
+                };
+                result.Add(record);
+                Log.Verbose("Mktool record added: {@record}", record);
             }
 
-            Log.Debug("Sorting");
-
-            IEnumerable<Record>? withIp = result.Where(r => r.IP != null);
-            IEnumerable<Record>? withoutIp = result.Where(r => r.IP == null);
-            List<Record>? sorted = withIp.OrderBy(r => { Debug.Assert(r.IP != null); return Version.Parse(r.IP); }).Concat(withoutIp).ToList();
-
-            Log.Information("Opening output");
-            TextWriter output;
-            if (options.File == null)
-            {
-                output = Console.Out;
-            }
-            else
-            {
-                try
-                {
-                    output = new StreamWriter(options.File.FullName);
-                }
-                catch(Exception ex)
-                {
-                    errorWriter.WriteLine(ex.Message);
-                    throw new MktoolException("Error", ExitCode.FileWriteError);
-                }
-            }
-
-            Log.Information("Writng output");
-            switch (options.Format)
-            {
-                case "csv":
-                    WriteCsvExport(output, sorted);
-                    break;
-                case "toml":
-                    Stream stream;
-                    if (options.File == null)
-                    {
-                        TomlWrapper t = new TomlWrapper { Record = sorted.ToArray() };
-                        Console.Write(Toml.WriteString(t));
-                    }
-                    else
-                    {
-                        try
-                        {
-                            output.Close();
-                            stream = new FileStream(options.File.FullName, FileMode.Create, FileAccess.Write);
-                        } catch (Exception ex)
-                        {
-                            errorWriter.WriteLine(ex.Message);
-                            throw new MktoolException("Error", ExitCode.FileWriteError);
-                        }
-                        WriteTomlExport(stream, sorted.ToArray());
-                    }
-                    break;
-                case "yaml":
-                    WriteYamlExport(output, sorted);
-                    break;
-                case "json":
-                    WriteJsonExport(output, sorted);
-                    break;
-                default:
-                    throw new ApplicationException($"Unexpected file format {options.Format}");
-            }
-
+            return result;
         }
 
         private static void WriteJsonExport(TextWriter output, List<Record> sorted)

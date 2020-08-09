@@ -254,7 +254,7 @@ namespace mktool.CommandLine
 
             command.Handler = CommandHandler.Create<DeprovisionOptions>(async (deprovisionOptions) =>
             {
-                return await Deprovision.Execute(deprovisionOptions);
+                return await CommandHandlerWrapper.ExecuteCommandHandler(deprovisionOptions, Deprovision.Execute);
             });
 
             return command;
@@ -338,9 +338,9 @@ namespace mktool.CommandLine
             };
             AddGlobalValidators(dhcpCommand);
 
-            dhcpCommand.Handler = CommandHandler.Create<ProvisionDhcpOptions>(async (provisionOptions) =>
+            dhcpCommand.Handler = CommandHandler.Create<ProvisionDhcpOptions>(async (provisionDhcpOptions) =>
             {
-                return await ProvisionDhcp.Execute(provisionOptions);
+                return await CommandHandlerWrapper.ExecuteCommandHandler(provisionDhcpOptions, ProvisionDhcp.Execute);
             });
             return dhcpCommand;
         }
@@ -372,9 +372,9 @@ namespace mktool.CommandLine
 
             AddGlobalValidators(dnsCommand);
 
-            dnsCommand.Handler = CommandHandler.Create<ProvisionDnsOptions>(async (provisionOptions) =>
+            dnsCommand.Handler = CommandHandler.Create<ProvisionDnsOptions>(async (provisionDnsOptions) =>
             {
-                return await ProvisionDns.Execute(provisionOptions);
+                return await CommandHandlerWrapper.ExecuteCommandHandler(provisionDnsOptions, ProvisionDns.Execute);
             });
             return dnsCommand;
         }
@@ -396,7 +396,7 @@ namespace mktool.CommandLine
             AddGlobalValidators(command);
             command.Handler = CommandHandler.Create<ImportOptions>(async (importOptions) =>
             {
-                return await Import.Execute(importOptions);
+                return await CommandHandlerWrapper.ExecuteCommandHandler(importOptions, Import.Execute);
             });
             return command;
 
