@@ -13,6 +13,9 @@
         MissingFormat = 10,
         ImportFileError = 11,
         ValidationError = 12,
-        MikrotikWriteError = 13
+        MikrotikWriteError = 13,
+        ConfigurationLoadError = 14,
+        ConfigurationError = 15,
+        AllocationPoolExhausted = 16
     }
 }

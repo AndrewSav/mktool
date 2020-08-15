@@ -106,7 +106,7 @@ namespace mktool.Commands
                 }
 
                 Log.Verbose("Tik WiFi record processing: {@ITikSentence}", item);
-                List<Record> matches = result.Where(r => string.Compare(r.Mac, item.Words["mac-address"], true) == 0).ToList();
+                List<Record> matches = result.Where(r => string.Equals(r.Mac, item.Words["mac-address"], StringComparison.OrdinalIgnoreCase)).ToList();
                 Log.Verbose("Matches found: {@records}", matches);
                 if (matches.Count > 1)
                 {
@@ -150,7 +150,7 @@ namespace mktool.Commands
                 if (item.Words["type"] == "A")
                 {
                     Log.Verbose("Tik dns record processing (type A): {@ITikSentence}", item);
-                    List<Record> matches = result.Where(r => string.Compare(r.IP, item.Words["address"], true) == 0).ToList();
+                    List<Record> matches = result.Where(r => string.Equals(r.IP, item.Words["address"], StringComparison.OrdinalIgnoreCase)).ToList();
                     Log.Verbose("Matches found: {@records}", matches);
                     if (matches.Count > 1)
                     {
@@ -245,7 +245,7 @@ namespace mktool.Commands
             Stream stream;
             if (fileName == null)
             {
-                TomlWrapper t = new TomlWrapper { Record = sorted.ToArray() };
+                RecordTomlWrapper t = new RecordTomlWrapper { Record = sorted.ToArray() };
                 Console.Write(Toml.WriteString(t));
             }
             else
@@ -266,7 +266,7 @@ namespace mktool.Commands
 
         private static void WriteTomlExport(Stream stream, Record[] sorted)
         {
-            TomlWrapper t = new TomlWrapper { Record = sorted };
+            RecordTomlWrapper t = new RecordTomlWrapper { Record = sorted };
             Toml.WriteStream(t, stream);
             stream.Flush();
         }

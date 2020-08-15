@@ -1,6 +1,6 @@
 ﻿namespace mktool.Models
 {
-    class TomlWrapper
+    class RecordTomlWrapper
 	{
 		public Record[]? Record { get; set; }
 	}

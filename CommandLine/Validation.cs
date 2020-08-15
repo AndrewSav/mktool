@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
 namespace mktool.CommandLine
@@ -18,7 +19,7 @@ namespace mktool.CommandLine
 
         public static bool IsIpValid(string address)
         {
-            return IPAddress.TryParse(address, out IPAddress _);
+            return IPAddress.TryParse(address, out IPAddress ip) && ip.AddressFamily == AddressFamily.InterNetwork;
         }
 
         public static bool IsMacValid(string address)

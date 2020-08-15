@@ -42,9 +42,9 @@ namespace mktool.Commands
             List<Record> dhcpRecords = records.Where(x => x.HasDhcp).ToList();
             List<Record> dnsRecords = records.Where(x => x.HasDns).ToList();
             List<Record> wifiRecords = records.Where(x => x.HasWiFi).ToList();
-            if (!ValidateDhcpRecords(dhcpRecords) ||!ValidateDnsRecords(dnsRecords))
+            if (!ValidateDhcpRecords(dhcpRecords) || !ValidateDnsRecords(dnsRecords))
             {
-                throw new MktoolException( ExitCode.ValidationError);
+                throw new MktoolException(ExitCode.ValidationError);
             }
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
@@ -81,64 +81,16 @@ namespace mktool.Commands
                 }
                 if (matches.Count == 0)
                 {
-                    CreateMikrotikWifiRecord(connection, record, options.Execute, options.ContinueOnErrors);
+                    Mikrotik.CreateMikrotikWifiRecord(GetMikrotikOptions(options), connection, record);
                 }
                 else
                 {
-                    UpdateMikrotikWifiRecord(options, connection, matches[0], record);
+                    Mikrotik.UpdateMikrotikWifiRecord(GetMikrotikOptions(options), connection, matches[0], record);
 
                 }
             }
         }
 
-        private static void UpdateMikrotikWifiRecord(ImportOptions options, ITikConnection connection, ITikSentence existing, Record record)
-        {
-            if (string.IsNullOrWhiteSpace(record.DnsHostName) || existing.Words["comment"] == record.DnsHostName)
-            {
-                if (!options.SkipExisting)
-                {
-                    Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
-                }
-                Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
-                return;
-            }
-
-            Console.WriteLine($"^Updating Wifi record. MAC: {record.Mac}");
-            Log.Information("Updating Wifi record. MAC: {MAC}", record.Mac);
-            Console.WriteLine($">comment: {existing.Words["comment"]} => {record.DnsHostName}");
-            Log.Information("comment: {oldValue} => {newValue}", existing.Words["comment"], record.DnsHostName);
-
-            string[] sentence = new[]
-            {
-                "/interface/wireless/access-list/set",
-                $"=comment={record.DnsHostName}",
-                $"=.id={existing.Words[".id"]}",
-            };
-            if (options.Execute)
-            {
-                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                Mikrotik.ProcessResponse(options.ContinueOnErrors, result);
-            }
-        }
-
-        private static void CreateMikrotikWifiRecord(ITikConnection connection, Record record, bool execute, bool continueOnErrors)
-        {
-            Console.WriteLine($"+Create Wifi record. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
-            Log.Information("Create Wifi record. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
-            string[] sentence = new[]
-            {
-                "/interface/wireless/access-list/add",
-                $"=mac-address={record.Mac}",
-                $"=comment={record.DnsHostName}",
-                $"=authentication=true",
-                $"=forwarding=true",
-            };
-            if (execute)
-            {
-                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                Mikrotik.ProcessResponse(continueOnErrors, result);
-            }
-        }
 
         private static void ProcessDnsRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> dns, List<Record> dnsRecords)
         {
@@ -159,11 +111,11 @@ namespace mktool.Commands
 
                 if (matches.Count == 0)
                 {
-                    CreateMikrotikDnsRecord(connection, record, options.Execute, options.ContinueOnErrors);
+                    Mikrotik.CreateMikrotikDnsRecord(GetMikrotikOptions(options), connection, record);
                 }
-                else 
-                { 
-                    if (string.Compare(record.DnsType, "A", true) == 0)
+                else
+                {
+                    if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase))
                     {
                         matches = matches.Where(x => x.Words.Any(y => y.Key == "address" && y.Value == record.IP)).ToList();
                         if (matches.Count > 1)
@@ -182,7 +134,7 @@ namespace mktool.Commands
 
                     if (matches.Count == 0)
                     {
-                        CreateMikrotikDnsRecord(connection, record, options.Execute, options.ContinueOnErrors);
+                        Mikrotik.CreateMikrotikDnsRecord(GetMikrotikOptions(options), connection, record);
                     }
                     else
                     {
@@ -192,44 +144,10 @@ namespace mktool.Commands
             }
         }
 
-        private static void CreateMikrotikDnsRecord(ITikConnection connection, Record record, bool execute, bool continueOnErrors)
-        {
-            string[] sentence;
-            if (string.Compare(record.DnsType, "A", true) == 0)
-            {
-                Console.WriteLine($"+Creating DNS A record. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
-                Log.Information($"Creating DNS A record. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.IP);
-                sentence = new[]
-                {
-                    "/ip/dns/static/add",
-                    $"={record.GetDnsIdField()}={record.GetDnsId()}",
-                    $"=type=A",
-                    $"=address={record.IP}",
-                };
-            }
-            else
-            {
-                Console.WriteLine($"+Creating DNS A record. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
-                Log.Information($"Creating DNS A record. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType, record.DnsCName);
-                sentence = new[]
-                {
-                    "/ip/dns/static/add",
-                    $"={record.GetDnsIdField()}={record.GetDnsId()}",
-                    $"=type=CNAME",
-                    $"=cname={record.DnsCName}",
-                };
-            }
-
-            if (execute)
-            {
-                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                Mikrotik.ProcessResponse(continueOnErrors, result);
-            }
-        }
 
         private static void ReportDnsRecordExists(ImportOptions options, Record record)
         {
-            if (string.Compare(record.DnsType, "A", true) == 0)
+            if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase))
             {
                 if (!options.SkipExisting)
                 {
@@ -274,7 +192,7 @@ namespace mktool.Commands
                 {
                     if (ipMatches[0] == macMatches[0])
                     {
-                        UpdateMikrotikDhcpRecord(options, connection, ipMatches[0], record);
+                        Mikrotik.UpdateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, ipMatches[0], record);
                     }
                     else
                     {
@@ -286,104 +204,25 @@ namespace mktool.Commands
 
                 if (ipMatches.Count == 1 && macMatches.Count == 0)
                 {
-                    UpdateMikrotikDhcpRecord(options, connection, ipMatches[0], record);
+                    Mikrotik.UpdateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, ipMatches[0], record);
                 }
                 if (ipMatches.Count == 0 && macMatches.Count == 1)
                 {
-                    UpdateMikrotikDhcpRecord(options, connection, macMatches[0], record);
+                    Mikrotik.UpdateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, macMatches[0], record);
                 }
                 if (ipMatches.Count == 0 && macMatches.Count == 0)
                 {
-                    CreateMikrotikDhcpRecord(connection, record, options.Execute, options.ContinueOnErrors);
+                    Mikrotik.CreateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, record);
+                    List<ITikSentence>? dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && y.Value == record.Mac))
+                        .Where(x => x.Words.Any(y => y.Key == "dynamic" && y.Value == "true"))
+                        .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
+                        .ToList();
+                    foreach (ITikSentence? dyn in dynamicMatches)
+                    {
+                        Mikrotik.DeleteMikrotikDhcpRecord(GetMikrotikOptions(options), connection, dyn);
+                    }
+
                 }
-            }
-        }
-
-
-        private static void CreateMikrotikDhcpRecord(ITikConnection connection, Record record, bool execute, bool continueOnErrors)
-        {
-            Console.WriteLine($"+Creating DHCP record. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
-            Log.Information("Creating DHCP record. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
-
-            if (string.IsNullOrWhiteSpace(record.DhcpLabel))
-            {
-                record.DhcpLabel = record.DnsHostName;
-            }
-
-            string[] sentence = new[]
-            {
-                "/ip/dhcp-server/lease/add",
-                $"=address={record.IP}",
-                $"=mac-address={record.Mac}",
-                $"=comment={record.DhcpLabel}",
-                $"=server={record.DhcpServer}",
-                "=use-src-mac=true",
-            };
-
-            if (execute)
-            {
-                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                Mikrotik.ProcessResponse(continueOnErrors, result);
-            }
-        }
-
-        private static void UpdateMikrotikDhcpRecord(ImportOptions options, ITikConnection connection, ITikSentence existing, Record record)
-        {
-            Dictionary<string, string> fieldsToUpdate = new Dictionary<string, string>();
-
-            if (string.IsNullOrWhiteSpace(record.DhcpLabel))
-            {
-                record.DhcpLabel = record.DnsHostName;
-            }
-
-            record.IP ??= "";
-            record.Mac ??= "";
-            record.DhcpLabel ??= "";
-            record.DhcpServer ??= "";
-
-            if (existing.Words["address"] != record.IP)
-            {
-                fieldsToUpdate.Add("address", record.IP);
-            }
-            if (existing.Words["comment"] != record.DhcpLabel)
-            {
-                fieldsToUpdate.Add("comment", record.DhcpLabel);
-            }
-            if (existing.Words["mac-address"] != record.Mac)
-            {
-                fieldsToUpdate.Add("mac-address", record.Mac);
-            }
-            if (existing.Words["server"] != record.DhcpServer)
-            {
-                fieldsToUpdate.Add("server", record.DhcpServer);
-            }
-
-            if (fieldsToUpdate.Count == 0)
-            {
-                if (!options.SkipExisting)
-                {
-                    Console.WriteLine($"=DHCP record already exist. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
-                }
-                Log.Information("DHCP record already exist. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
-                return;
-            }
-
-            Console.WriteLine($"^Updating DHCP record. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
-            Log.Information("Updating DHCP record. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
-            foreach (KeyValuePair<string, string> kvp in fieldsToUpdate)
-            {
-                Console.WriteLine($">{kvp.Key}: {existing.Words[kvp.Key]} => {kvp.Value}");
-                Log.Information("{field}: {oldValue} => {newValue}", kvp.Key, existing.Words[kvp.Key], kvp.Value);
-            }
-
-            string[] sentence = new[] { "/ip/dhcp-server/lease/set" }
-                .Concat(fieldsToUpdate.Select(x => $"={x.Key}={x.Value}"))
-                .Concat(new[] { $"=.id={existing.Words[".id"]}" })
-                .ToArray();
-            if (options.Execute)
-            {
-                IEnumerable<ITikSentence> result = Mikrotik.CallMikrotik(connection, sentence);
-                Mikrotik.ProcessResponse(options.ContinueOnErrors, result);
             }
         }
 
@@ -407,19 +246,19 @@ namespace mktool.Commands
                     Console.Error.WriteLine($"Error: Both DnsHostName {record.DnsHostName} and DnsRegexp '{record.DnsRegexp}' are present in a single record");
                     Log.Error("Both DnsHostName {hostName} and DnsRegexp '{regexp}' are present in a single record", record.DnsHostName, record.DnsRegexp);
                 }
-                if (!string.IsNullOrWhiteSpace(record.DnsType) && string.Compare(record.DnsType, "A", true) != 0 && string.Compare(record.DnsType, "CNAME", true) != 0)
+                if (!string.IsNullOrWhiteSpace(record.DnsType) && !string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase) && string.Compare(record.DnsType, "CNAME", true) != 0)
                 {
                     valid = false;
                     Console.Error.WriteLine($"Error: record type is not 'A' or 'CNAME': '{record.DnsType}', DnsId: {record.GetDnsId()}");
                     Log.Error("Record type is not 'A' or 'CNAME': '{dnsType}', DnsId: {dns}", record.DnsType, record.GetDnsId());
                 }
-                if (string.Compare(record.DnsType, "A", true) == 0 && string.IsNullOrEmpty(record.IP))
+                if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(record.IP))
                 {
                     valid = false;
                     Console.Error.WriteLine($"Error: 'A' record must have IP address. {record.GetDnsIdName()}: {record.GetDnsId()}");
                     Log.Error($"'A' record must have IP address. {record.GetDnsIdName()}: {{dns}}", record.GetDnsId());
                 }
-                if (string.Compare(record.DnsType, "CNAME", true) == 0 && string.IsNullOrEmpty(record.DnsCName))
+                if (string.Equals(record.DnsType, "CNAME", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(record.DnsCName))
                 {
                     valid = false;
                     Console.Error.WriteLine($"Error: 'CNAME' record must have CNAME. {record.GetDnsIdName()}: {record.GetDnsId()}");
@@ -482,7 +321,7 @@ namespace mktool.Commands
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                throw new MktoolException( ExitCode.ImportFileError);
+                throw new MktoolException(ExitCode.ImportFileError);
             }
             Log.Verbose("Json deserialization result: {@result}", result);
             return result;
@@ -511,7 +350,7 @@ namespace mktool.Commands
             List<Record> result;
             try
             {
-                result = Toml.ReadFile<TomlWrapper>(fileName).Record.ToList();
+                result = Toml.ReadFile<RecordTomlWrapper>(fileName).Record.ToList();
             }
             catch (Exception ex)
             {
@@ -552,6 +391,16 @@ namespace mktool.Commands
                 throw new MktoolException( ExitCode.MissingFormat);
             }
             return extension == "yml" ? "yaml" : extension;
+        }
+        private static MikrotikOptions GetMikrotikOptions(ImportOptions options)
+        {
+            return new MikrotikOptions
+            {
+                ContinueOnErrors = options.ContinueOnErrors,
+                Execute = options.Execute,
+                LogToStdout = true,
+                SkipExisting = options.SkipExisting
+            };
         }
     }
 }
