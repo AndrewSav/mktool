@@ -10,10 +10,11 @@ using System.Threading.Tasks;
 
 namespace mktool.CommandLine
 {
-  
+
     //TODO: provision WiFi only? (scrape log)
-    //TODO: DHCP - convert dynamic records
-    
+    //TODO: DHCP - convert dynamic records (take hint: active host name)
+    //TODO: DHCP/DNS - do we need execute and continue on error?
+
     static class Parser
     {
 
@@ -77,7 +78,7 @@ namespace mktool.CommandLine
                     description: $"(global) Vault token, alternatively can be specified in VAULT_TOKEN environment variable, or {rootCommand.Name} can reuse results of 'vault login' command"));
             rootCommand.AddGlobalOption(new Option<bool>(
                     new[] { "--vault-diag", "--vd", "-z" },
-                    description: $"(global) In case of problems with Vault response will dump the content of the respond to stderr"));
+                    description: $"(global) In case of problems with Vault response will dump the content of the response to stderr"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--log-level", "-l" },
                     description: $"(global) Write log to {LoggingHelper.LogFile}. Re-created each run") { Argument = new Argument<string>().FromAmong(new[] { "verbose", "debug","information","warning","error","fatal"})});

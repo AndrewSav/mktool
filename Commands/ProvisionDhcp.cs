@@ -108,7 +108,7 @@ namespace mktool.Commands
             };
 
             Mikrotik.CreateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, record);
-            List<ITikSentence>? dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && y.Value == record.Mac))
+            List<ITikSentence>? dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && string.Equals(y.Value, record.Mac, StringComparison.OrdinalIgnoreCase)))
                 .Where(x => x.Words.Any(y => y.Key == "dynamic" && y.Value == "true"))
                 .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
                 .ToList();
