@@ -20,7 +20,12 @@ namespace mktool.Commands
             LoggingHelper.ConfigureLogging(options.LogLevel);
             Log.Information("ProvisionDhcp command started");
             Log.Debug("Parameters: {@params}", options);
-                        
+
+            if (!options.Execute)
+            {
+                Console.WriteLine("DRY RUN");
+            }
+
             Allocation[] allocations;
             Debug.Assert(options.Config != null);
             try
@@ -83,16 +88,23 @@ namespace mktool.Commands
                 
             } while (usedIps.Contains(ip.ToString()));
 
-            //IEnumerable<ITikSentence> dhcpServers = Mikrotik.GetDhcpServers(connection);
-            //var servers = dhcpServers.Where(x => !x.Words.ContainsKey("disabled") || x.Words["disabled"] != "true")
-            //    .Where(x => x.Words.ContainsKey("name"))
-            //   .Select(c => c.Words["name"]).ToList();
-
-            //if (! servers.Contains(allocation.DhcpServer))
-            //{
-            //    Console.Error.WriteLine($"Allocation {options.Allocation} specifies DhcpServer {allocation.DhcpServer}, but it is not present on Mikrotik");
-            //    throw new MktoolException(ExitCode.ConfigurationError);
-            //}
+            string macAddress;
+            if (options.MacAddress == null)
+            {
+                Debug.Assert(options.ActiveHost != null);
+                macAddress = dhcp.Where(x => x.Words.ContainsKey("dynamic") &&  x.Words["dynamic"] != "true" && 
+                        x.Words.ContainsKey("host-name") && x.Words["host-name"] == options.ActiveHost)
+                    .SelectMany(x => x.Words.Where(y => y.Key == "mac-address")).Select(x => x.Value).FirstOrDefault();
+                if (macAddress == null)
+                {
+                    Console.Error.WriteLine($"No dynamic DHCP record with given host name {options.ActiveHost} was found");
+                    throw new MktoolException(ExitCode.MikrotikRecordNotFound);
+                }                
+            }
+            else
+            {
+                macAddress = options.MacAddress;
+            }
 
             Record record = new Record
             {
@@ -104,7 +116,7 @@ namespace mktool.Commands
                 HasDns = options.DnsName == null,
                 HasWiFi = options.EnableWiFi,
                 IP = ip,
-                Mac = options.MacAddress
+                Mac = macAddress
             };
 
             Mikrotik.CreateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, record);
@@ -133,8 +145,8 @@ namespace mktool.Commands
         {
             return new MikrotikOptions
             {
-                ContinueOnErrors = false,
-                Execute = true,
+                ContinueOnErrors = options.ContinueOnErrors,
+                Execute = options.Execute,
                 LogToStdout = false,
                 SkipExisting = true
             };

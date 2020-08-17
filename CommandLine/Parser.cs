@@ -12,8 +12,7 @@ namespace mktool.CommandLine
 {
 
     //TODO: provision WiFi only? (scrape log)
-    //TODO: DHCP - convert dynamic records (take hint: active host name)
-    //TODO: DHCP/DNS - do we need execute and continue on error?
+    //TODO: info mode, show dynamic leases and wifi failed logs
 
     static class Parser
     {
@@ -225,11 +224,13 @@ namespace mktool.CommandLine
 
             Option<string> dnsNameOption = new Option<string>(new[] { "--dns-name", "-d" }, description: "DNS name to deprovision");
             Option<string> labelOption = new Option<string>(new[] { "--label", "-b" }, description: "DHCP comment to deprovision");
+            Option<bool> disableOption = new Option<bool>(new[] { "--disable", "-q" }, description: "Instead of deliting Mikrotik records mark them as disabled");
 
             command.Add(macAddressOption);
             command.Add(ipAddressOption);
             command.Add(dnsNameOption);
             command.Add(labelOption);
+            command.Add(disableOption);
 
             command.AddValidator(commandResult =>
             {
@@ -305,7 +306,7 @@ namespace mktool.CommandLine
                 return null;
             });
 
-            Option<string> macAddressOption = new Option<string>(new[] { "--mac-address", "-m" }, description: "MAC address") { IsRequired = true };
+            Option<string> macAddressOption = new Option<string>(new[] { "--mac-address", "-m" }, description: "MAC address");
             macAddressOption.AddValidator(r =>
             {
                 string? value = r.GetValueOrDefault<string>();
@@ -319,6 +320,9 @@ namespace mktool.CommandLine
             Command dhcpCommand = new Command("dhcp", "Provision a new DHCP record on Mikroik, and return information about the address provisioned")
             {
                 macAddressOption,
+                new Option<string>(
+                    new []{ "--active-host", "--ah", "-r" },
+                    description: "When speified instead of --mac-address option, the mac-address will be fetched from a dynamic dhcp record on Mikrotik, with the active host name specified in this option"),
                 dnsNameOption,
                 new Option<FileInfo>(
                     new []{ "--config", "-с" },
@@ -334,10 +338,24 @@ namespace mktool.CommandLine
                     new []{ "--label", "-b" },
                     description: "Comment field for the DHCP lease on Mikrotik, if different from dns-name or dns-name is not specified"),
                 new Option<bool>(
+                    new []{ "--continue-on-errors", "-k" },
+                    description: "Does not stop execution with a error code when the was a error writing a record to Mikrotik"),
+                new Option<bool>(
                     new []{ "--execute", "-e" },
                     description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik."),
             };
             AddGlobalValidators(dhcpCommand);
+
+            dhcpCommand.AddValidator(commandResult =>
+            {
+                if (!commandResult.Children.Contains("mac-address") &&
+                    !commandResult.Children.Contains("active-host"))
+                {
+                    return "One of the options '--mac-address' and '--active-host' is required.";
+                }
+                return null;
+            });
+
 
             dhcpCommand.Handler = CommandHandler.Create<ProvisionDhcpOptions>(async (provisionDhcpOptions) =>
             {

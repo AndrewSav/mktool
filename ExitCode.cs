@@ -16,6 +16,7 @@
         MikrotikWriteError = 13,
         ConfigurationLoadError = 14,
         ConfigurationError = 15,
-        AllocationPoolExhausted = 16
+        AllocationPoolExhausted = 16,
+        MikrotikRecordNotFound = 17
     }
 }

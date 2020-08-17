@@ -26,7 +26,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex);
+                Console.Error.WriteLine(ex.Message);
                 throw new MktoolException( ExitCode.MikrotikConnectionError);
             }
             return connection;
@@ -43,7 +43,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex);
+                Console.Error.WriteLine(ex.Message);
                 throw new MktoolException( ExitCode.MikrotikConnectionError);
             }
             Log.Verbose("Response: {@response}", response);
