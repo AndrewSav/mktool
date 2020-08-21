@@ -5,6 +5,7 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -366,20 +367,31 @@ namespace mktool.CommandLine
 
         private static Command BuildProvisionDnsCommand()
         {
+            Option<string> ipAddressOption = new Option<string>(new[] { "--ip-address", "-i" }, description: "Provide IP address for record type 'a'");
+            ipAddressOption.AddValidator(r =>
+            {
+                string? value = r.GetValueOrDefault<string>();
+                if (value != null && !Validation.IsIpValid(value))
+                {
+                    return $"Option {r.Token?.Value} has to be a valid IPv4 address.";
+                }
+                return null;
+            });
+
+            Option<string> recordTypeOption = new Option<string>(
+                new[] { "--record-type", "-r" },
+                description: "Dns record type")
+            { Argument = new Argument<string>(() => "a").FromAmong(new[] { "a", "cname" }) };
             Command dnsCommand = new Command("dns", "Provision a new DNS record on Mikroik")
             {
-                new Option<string>(
-                    new []{ "--record-type", "-r" },
-                    description: "Dns record type") { Argument = new Argument<string>(() => "a").FromAmong(new[] { "a", "cname"}) },
+                recordTypeOption,
                 new Option<string>(
                     new []{ "--dns-name", "-d" },
                     description: "DNS record name.  Mutually exclusine with '--regexp'"),
-                new Option<bool>(
+                new Option<string>(
                     new []{ "--regexp", "-x" },
                     description: "Provide Mikrotik regular expression. Mutually exclusine with '--dns-name'"),
-                new Option<string>(
-                    new []{ "--ip-address", "-i" },
-                    description: "Provide IP address for record type 'a'"),
+                ipAddressOption,
                 new Option<string>(
                     new []{ "--cname", "-y" },
                     description: "Provide CNAME for record type 'cname'"),
@@ -390,6 +402,42 @@ namespace mktool.CommandLine
 
 
             AddGlobalValidators(dnsCommand);
+
+            recordTypeOption.AddValidator(commandResult =>
+            {
+                Debug.Assert(commandResult.Parent != null);
+                var value = commandResult.GetValueOrDefault<string>();
+                if (string.Equals(value, "a", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!commandResult.Parent.Children.Contains("ip-address"))
+                    {
+                        return "When '--record-type' is 'a', '--ip-address' is required.";
+                    }
+                }
+                if (string.Equals(value, "cname", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!commandResult.Parent.Children.Contains("cname"))
+                    {
+                        return "When '--record-type' is 'cname', '--cname' is required.";
+                    }
+                }
+                return null;
+            });
+
+            dnsCommand.AddValidator(commandResult =>
+            {
+                if (!commandResult.Children.Contains("regexp") &&
+                    !commandResult.Children.Contains("dns-name"))
+                {
+                    return "One of the options '--dns-name' and '--regexp' is required.";
+                }
+                if (commandResult.Children.Contains("regexp") &&
+                    commandResult.Children.Contains("dns-name"))
+                {
+                    return "Only one of the options '--dns-name' and '--regexp' can be specified.";
+                }
+                return null;
+            });
 
             dnsCommand.Handler = CommandHandler.Create<ProvisionDnsOptions>(async (provisionDnsOptions) =>
             {

@@ -10,6 +10,5 @@ namespace mktool.CommandLine
         public string? IpAddress { get; set; }
         public string? Cname { get; set; }
         public bool Execute { get; set; }
-        public bool Disable { get; set; }
     }
 }

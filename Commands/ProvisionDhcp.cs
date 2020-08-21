@@ -139,7 +139,7 @@ namespace mktool.Commands
                 Mikrotik.CreateMikrotikWifiRecord(GetMikrotikOptions(options), connection, record);
             }
 
-            Console.WriteLine($"{{\"ip\"=\"{ip}\"}}");
+            Console.WriteLine(ip);
         }
         private static MikrotikOptions GetMikrotikOptions(ProvisionDhcpOptions options)
         {
