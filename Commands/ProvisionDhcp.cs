@@ -34,7 +34,7 @@ namespace mktool.Commands
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Configuration load error {options.Config.FullName}; " + ex.Message);
+                Console.Error.WriteLine($"Error: Cannot load configuration '{options.Config.FullName}'; " + ex.Message);
                 throw new MktoolException(ExitCode.ConfigurationLoadError);
             }
 
@@ -61,7 +61,7 @@ namespace mktool.Commands
             }
             catch(FormatException ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"Error: Cannot parse IP range '{allocation.IpRange}'. {ex.Message}");
                 throw new MktoolException(ExitCode.ConfigurationError);
             }
 
@@ -147,7 +147,7 @@ namespace mktool.Commands
             {
                 ContinueOnErrors = options.ContinueOnErrors,
                 Execute = options.Execute,
-                LogToStdout = false,
+                LogToStdout = !options.Execute,
                 SkipExisting = true
             };
         }

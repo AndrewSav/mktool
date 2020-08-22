@@ -26,8 +26,8 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                throw new MktoolException( ExitCode.MikrotikConnectionError);
+                Console.Error.WriteLine($"Error connecting to Mikrotik. {ex.Message}");
+                throw new MktoolException(ExitCode.MikrotikConnectionError);
             }
             return connection;
         }
@@ -43,7 +43,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"Error executing Mikrotik command: {ex.Message}");
                 throw new MktoolException( ExitCode.MikrotikConnectionError);
             }
             Log.Verbose("Response: {@response}", response);
@@ -101,8 +101,8 @@ namespace mktool.Utility
 
         public static void CreateMikrotikDhcpRecord(MikrotikOptions options, ITikConnection connection, Record record)
         {
-            if (options.LogToStdout) Console.WriteLine($"+Creating DHCP record. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
-            Log.Information("Creating DHCP record. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
+            if (options.LogToStdout) Console.WriteLine($"+Creating DHCP record. IP: {record.IP}, MAC: {record.Mac}, Comment: {record.DhcpLabel}, Server: {record.DhcpServer}");
+            Log.Information("Creating DHCP record. IP: {IP}, MAC: {MAC}, Comment: {Label}, Server: {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
 
             if (string.IsNullOrWhiteSpace(record.DhcpLabel))
             {
@@ -202,7 +202,7 @@ namespace mktool.Utility
             }
             else
             {
-                if (options.LogToStdout) Console.WriteLine($"+Creating DNS A record. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
+                if (options.LogToStdout) Console.WriteLine($"+Creating DNS CNAME record. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
                 Log.Information($"Creating DNS A record. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType, record.DnsCName);
                 sentence = new[]
                 {
@@ -221,8 +221,8 @@ namespace mktool.Utility
         }
         public static void CreateMikrotikWifiRecord(MikrotikOptions options, ITikConnection connection, Record record)
         {
-            if (options.LogToStdout) Console.WriteLine($"+Create Wifi record. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
-            Log.Information("Create Wifi record. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
+            if (options.LogToStdout) Console.WriteLine($"+Creating Wifi record. MAC: {record.Mac}, Comment: {record.DnsHostName}");
+            Log.Information("Creating Wifi record. MAC: {mac}, Comment: {dns}", record.Mac, record.DnsHostName);
             string[] sentence = new[]
             {
                 "/interface/wireless/access-list/add",

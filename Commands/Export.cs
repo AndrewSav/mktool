@@ -78,7 +78,7 @@ namespace mktool.Commands
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine($"Error: Cannot write to {fileName}. {ex.Message}");
                     throw new MktoolException( ExitCode.FileWriteError);
                 }
             }
@@ -257,7 +257,7 @@ namespace mktool.Commands
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine($"Error: Cannot write to {fileName}. {ex.Message}");
                     throw new MktoolException( ExitCode.FileWriteError);
                 }
                 WriteTomlExport(stream, sorted.ToArray());

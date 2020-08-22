@@ -50,12 +50,6 @@ namespace mktool.Utility
                 }
                 throw new MktoolException( ExitCode.VaultRequestError);
             }
-            catch (VaultNoAddressException ex)
-            {
-                Log.Error(ex, "Error");
-                Console.Error.WriteLine(ex.Message);
-                throw new MktoolException( ExitCode.VaultMissingAddress);
-            }
             catch (VaultMissingKeyException ex)
             {
                 Log.Error(ex, "Error");
@@ -76,9 +70,8 @@ namespace mktool.Utility
             catch (HttpRequestException ex)
             {
                 Log.Error(ex, "Error");
-                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"Error: HTTP request to Vault failed. {ex.Message}");
                 throw new MktoolException( ExitCode.VaultHttpError);
-
             }
         }
     }

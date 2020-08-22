@@ -320,7 +320,7 @@ namespace mktool.Commands
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"Error: Cannot deserialize '{fileName}'. {ex.Message}");
                 throw new MktoolException(ExitCode.ImportFileError);
             }
             Log.Verbose("Json deserialization result: {@result}", result);
@@ -338,7 +338,7 @@ namespace mktool.Commands
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"Error: Cannot deserialize '{fileName}'. {ex.Message}");
                 throw new MktoolException( ExitCode.ImportFileError);
             }
             Log.Verbose("Yaml deserialization result: {@result}", result);
@@ -354,7 +354,7 @@ namespace mktool.Commands
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"Error: Cannot deserialize '{fileName}'. {ex.Message}");
                 throw new MktoolException( ExitCode.ImportFileError);
             }
             Log.Verbose("Toml deserialization result: {@result}", result);
@@ -372,8 +372,8 @@ namespace mktool.Commands
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                throw new MktoolException( ExitCode.ImportFileError);
+                Console.Error.WriteLine($"Error: Cannot deserialize '{fileName}'. {ex.Message}");
+                throw new MktoolException(ExitCode.ImportFileError);
             }
             Log.Verbose("Csv deserialization result: {@result}", result);
             return result;

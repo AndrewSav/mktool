@@ -31,7 +31,7 @@ namespace mktool.Utility
             }
             catch (Exception ex)
             {
-                Console.Error.Write(ex.Message);
+                Console.Error.Write($"Error initializing logging system. {ex.Message}");
                 throw new MktoolException( ExitCode.LoggingInitError);
             }
         }

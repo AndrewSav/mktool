@@ -47,7 +47,7 @@ namespace mktool.Commands
             {
                 ContinueOnErrors = false,
                 Execute = options.Execute,
-                LogToStdout = false
+                LogToStdout = true
             };
         }
     }
