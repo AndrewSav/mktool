@@ -111,7 +111,7 @@ namespace mktool
             {
                 throw new FormatException($"'{parts[0]}' cannot be parsed as IP address");
             }
-            if (int.TryParse(parts[1], out int netMask))
+            if (!int.TryParse(parts[1], out int netMask))
             {
                 throw new FormatException($"'{parts[1]}' cannot be parsed as an integer net mask");
             }

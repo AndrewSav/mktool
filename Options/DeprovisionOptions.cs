@@ -7,5 +7,6 @@
         public string? DnsName { get; set; }
         public string? Label { get; set; }
         public bool Disable { get; set; }
+        public bool Execute { get; set; }
     }
 }

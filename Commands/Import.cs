@@ -68,7 +68,7 @@ namespace mktool
                     if (!options.SkipExisting)
                     {
                         Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
-                        Console.WriteLine("?Warning: message");
+                        Console.WriteLine($"?Warning: {message}");
                     }
                     Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
                     Log.Warning(message);
@@ -193,7 +193,7 @@ namespace mktool
                     {
                         string message = $"DHCP record IP {record.Ip}, MAC {record.Mac} is ignored. Clashes with records: IP {ipMatches[0].Words["address"]}, MAC {ipMatches[0].Words["mac-address"]} and IP {macMatches[0].Words["address"]}, MAC {macMatches[0].Words["mac-address"]}";
                         Log.Warning(message);
-                        Console.WriteLine("?Warning: message");
+                        Console.WriteLine($"?Warning: {message}");
                     }
                 }
 

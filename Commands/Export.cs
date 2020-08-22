@@ -24,18 +24,24 @@ namespace mktool
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
 
-            IEnumerable<ITikSentence> dhcp = Mikrotik.GetDhcpRecords(connection);
-            List<Record> result = ProcessDhcpRecords(dhcp);
-            IEnumerable<ITikSentence> dns = Mikrotik.GetDnsRecords(connection);
-            MergeDnsRecords(result, dns);
-            IEnumerable<ITikSentence> wifi = Mikrotik.GetWifiRecords(connection);
-            MergeWiFiRecords(result, wifi);
+            List<Record> result = ExportRecords(connection).Select(x => new Record(x)).ToList();
 
             List<Record> sorted = SortRecords(result);
             TextWriter output = CreateOutputWriter(options.File?.FullName);
             Debug.Assert(options.Format != null);
             WriteOutput(options.File?.FullName, options.Format, sorted, output);
 
+        }
+
+        public static List<IdentityRecord> ExportRecords(ITikConnection connection)
+        {
+            IEnumerable<ITikSentence> dhcp = Mikrotik.GetDhcpRecords(connection);
+            List<IdentityRecord> result = ProcessDhcpRecords(dhcp);
+            IEnumerable<ITikSentence> dns = Mikrotik.GetDnsRecords(connection);
+            MergeDnsRecords(result, dns);
+            IEnumerable<ITikSentence> wifi = Mikrotik.GetWifiRecords(connection);
+            MergeWiFiRecords(result, wifi);
+            return result;
         }
 
         private static void WriteOutput(string? fileName, string format, List<Record> sorted, TextWriter output)
@@ -92,7 +98,7 @@ namespace mktool
             return sorted;
         }
 
-        private static void MergeWiFiRecords(List<Record> result, IEnumerable<ITikSentence> wifi)
+        private static void MergeWiFiRecords(List<IdentityRecord> result, IEnumerable<ITikSentence> wifi)
         {
             foreach (ITikSentence item in wifi)
             {
@@ -102,8 +108,14 @@ namespace mktool
                     continue;
                 }
 
+                if (!item.Words.ContainsKey("disabled") || (item.Words["disabled"] != "false"))
+                {
+                    Log.Verbose("Disabled Tik WiFi record discarded: {@ITikSentence}", item);
+                    continue;
+                }
+                
                 Log.Verbose("Tik WiFi record processing: {@ITikSentence}", item);
-                List<Record> matches = result.Where(r => string.Equals(r.Mac, item.Words["mac-address"], StringComparison.OrdinalIgnoreCase)).ToList();
+                List<IdentityRecord> matches = result.Where(r => string.Equals(r.Mac, item.Words["mac-address"], StringComparison.OrdinalIgnoreCase)).ToList();
                 Log.Verbose("Matches found: {@records}", matches);
                 if (matches.Count > 1)
                 {
@@ -111,8 +123,9 @@ namespace mktool
                 }
                 if (matches.Count == 0)
                 {
-                    Record record = new Record
+                    IdentityRecord record = new IdentityRecord
                     {
+                        WifiId = item.Words[".id"],
                         DnsHostName = item.Words["comment"],
                         Mac = item.Words["mac-address"],
                         HasWiFi = true
@@ -122,20 +135,33 @@ namespace mktool
                 }
                 else
                 {
-                    Record record = matches[0];
+                    IdentityRecord record = matches[0];
                     record.HasWiFi = true;
+                    record.WifiId = item.Words[".id"];
                     Log.Verbose("Mktool record updated: {@record}", record);
                 }
             }
         }
 
-        private static void MergeDnsRecords(List<Record> result, IEnumerable<ITikSentence> dns)
+        private static void MergeDnsRecords(List<IdentityRecord> result, IEnumerable<ITikSentence> dns)
         {
             foreach (ITikSentence item in dns)
             {
-                if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false") || ((item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))))
+                if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false"))
                 {
-                    Log.Verbose("Tik dns record discarded: {@ITikSentence}", item);
+                    Log.Verbose("Dynamic Tik dns record discarded: {@ITikSentence}", item);
+                    continue;
+                }
+
+                if (item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))
+                {
+                    Log.Verbose("Tik dns record with unsupported type discarded: {@ITikSentence}", item);
+                    continue;
+                }
+
+                if (!item.Words.ContainsKey("disabled") || (item.Words["disabled"] != "false"))
+                {
+                    Log.Verbose("Disabled Tik dns record discarded: {@ITikSentence}", item);
                     continue;
                 }
 
@@ -147,7 +173,7 @@ namespace mktool
                 if (item.Words["type"] == "A")
                 {
                     Log.Verbose("Tik dns record processing (type A): {@ITikSentence}", item);
-                    List<Record> matches = result.Where(r => string.Equals(r.Ip, item.Words["address"], StringComparison.OrdinalIgnoreCase)).ToList();
+                    List<IdentityRecord> matches = result.Where(r => string.Equals(r.Ip, item.Words["address"], StringComparison.OrdinalIgnoreCase)).ToList();
                     Log.Verbose("Matches found: {@records}", matches);
                     if (matches.Count > 1)
                     {
@@ -155,8 +181,9 @@ namespace mktool
                     }
                     if (matches.Count == 0 || (item.Words.ContainsKey("regexp")))
                     {
-                        Record record = new Record
+                        IdentityRecord record = new IdentityRecord
                         {
+                            DnsId = item.Words[".id"],
                             Ip = item.Words["address"],
                             DnsType = "A",
                             HasDns = true
@@ -167,7 +194,8 @@ namespace mktool
                     }
                     else
                     {
-                        Record record = matches[0];
+                        IdentityRecord record = matches[0];
+                        record.DnsId = item.Words[".id"];
                         record.HasDns = true;
                         record.DnsType = "A";
                         ApplyName(item, record);
@@ -177,8 +205,9 @@ namespace mktool
                 if (item.Words["type"] == "CNAME")
                 {
                     Log.Verbose("Tik dns record processing (type CNAME): {@ITikSentence}", item);
-                    Record record = new Record
+                    IdentityRecord record = new IdentityRecord
                     {
+                        DnsId = item.Words[".id"],
                         DnsCName = item.Words["cname"],
                         DnsType = "CNAME",
                         HasDns = true
@@ -190,21 +219,28 @@ namespace mktool
             }
         }
 
-        private static List<Record> ProcessDhcpRecords(IEnumerable<ITikSentence> dhcp)
+        private static List<IdentityRecord> ProcessDhcpRecords(IEnumerable<ITikSentence> dhcp)
         {
-            List<Record> result = new List<Record>();
+            List<IdentityRecord> result = new List<IdentityRecord>();
 
             foreach (ITikSentence item in dhcp)
             {
                 if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false"))
                 {
-                    Log.Verbose("Tik dhcp record discarded: {@ITikSentence}", item);
+                    Log.Verbose("Dynamic Tik dhcp record discarded: {@ITikSentence}", item);
+                    continue;
+                }
+
+                if (!item.Words.ContainsKey("disabled") || (item.Words["disabled"] != "false"))
+                {
+                    Log.Verbose("Disabled Tik dhcp record discarded: {@ITikSentence}", item);
                     continue;
                 }
 
                 Log.Verbose("Tik dhcp record processing: {@ITikSentence}", item);
-                Record record = new Record
+                IdentityRecord record = new IdentityRecord
                 {
+                    DhcpId = item.Words[".id"],
                     Ip = item.Words["address"],
                     DhcpLabel = item.Words["comment"],
                     Mac = item.Words["mac-address"],

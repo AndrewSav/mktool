@@ -198,7 +198,7 @@ namespace mktool
 
         private static Command BuildDeprovisionCommand()
         {
-            Command command = new Command("deprovision", "Deprovision an IP address on Mikrotik from DHCP, DNS and WiFi");
+            Command command = new Command("deprovision", "Deprovision a DHCP record, a WiFi record (if any) and all DNS records, matching provided criteria");
 
             Option<string> macAddressOption = new Option<string>(new[] { "--mac-address", "-m" }, description: "MAC address to deprovision"); 
             macAddressOption.AddValidator(r =>
@@ -225,12 +225,15 @@ namespace mktool
             Option<string> dnsNameOption = new Option<string>(new[] { "--dns-name", "-d" }, description: "DNS name to deprovision");
             Option<string> labelOption = new Option<string>(new[] { "--label", "-b" }, description: "DHCP comment to deprovision");
             Option<bool> disableOption = new Option<bool>(new[] { "--disable", "-q" }, description: "Instead of deleting Mikrotik records mark them as disabled");
+            Option<bool> executeOption = new Option<bool>(new[] { "--execute", "-e" }, description: "By default this command is run in dry-run mode. Specify this to actually apply changes to Mikrotik.");
+
 
             command.Add(macAddressOption);
             command.Add(ipAddressOption);
             command.Add(dnsNameOption);
             command.Add(labelOption);
             command.Add(disableOption);
+            command.Add(executeOption);
 
             command.AddValidator(commandResult =>
             {
@@ -406,12 +409,20 @@ namespace mktool
                     {
                         return "When '--record-type' is 'a', '--ip-address' is required.";
                     }
+                    if (commandResult.Parent.Children.Contains("cname"))
+                    {
+                        return "When '--record-type' is 'a', '--cname' is not supported.";
+                    }
                 }
                 if (string.Equals(value, "cname", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!commandResult.Parent.Children.Contains("cname"))
                     {
                         return "When '--record-type' is 'cname', '--cname' is required.";
+                    }
+                    if (commandResult.Parent.Children.Contains("ip-address"))
+                    {
+                        return "When '--record-type' is 'cname', '--ip-address' is nor supported.";
                     }
                 }
                 return null;

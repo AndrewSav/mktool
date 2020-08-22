@@ -94,6 +94,63 @@ namespace mktool
             }
         }
 
+        public static void DeleteOrDisableMikrotikRecord(MikrotikOptions options, ITikConnection connection, IdentityRecord record, bool disable)
+        {
+
+            string verb = disable ? "Disabling" : "Deleting";
+            if (record.HasDhcp)
+            {
+                Debug.Assert(record.DhcpId != null);
+                if (options.LogToStdout) Console.WriteLine($"-{verb} DHCP record {record.FormatDhcp()}"); ;
+                Log.Information($"{verb} DHCP record {{record}}", record.FormatDhcp());
+                if (options.Execute)
+                {
+                    DeleteOrDisableMikrotikRecord(connection, "/ip/dhcp-server/lease", record.DhcpId, options.ContinueOnErrors, disable);
+                }
+            }
+            if (record.HasDns)
+            {
+                Debug.Assert(record.DnsId != null);
+                if (options.LogToStdout) Console.WriteLine($"-{verb} DNS record {record.FormatDns()}"); ;
+                Log.Information($"{verb} DNS record {{record}}", record.FormatDns());
+                if (options.Execute)
+                {
+                    DeleteOrDisableMikrotikRecord(connection, "/ip/dns/static", record.DnsId, options.ContinueOnErrors, disable);
+                }
+
+            }
+            if (record.HasWiFi)
+            {
+                Debug.Assert(record.WifiId != null);
+                if (options.LogToStdout) Console.WriteLine($"-{verb} WiFi record {record.FormatWiFi()}"); ;
+                Log.Information($"{verb} WiFi record {{record}}", record.FormatWiFi());
+                if (options.Execute)
+                {
+                    DeleteOrDisableMikrotikRecord(connection, "/interface/wireless/access-list", record.WifiId, options.ContinueOnErrors, disable);
+                }
+            }
+            
+        }
+
+        public static void DeleteOrDisableMikrotikRecord(ITikConnection connection, string recordType, string recordId, bool continueOnErrors, bool disable)
+        {
+            string[] sentence = disable ?
+            new[]
+            {
+                $"{recordType}/set",
+                $"=.id={recordId}",
+                $"=disabled=true",
+            } : 
+            new[]
+            {
+                $"{recordType}/remove",
+                $"=.id={recordId}",
+            };
+            
+            IEnumerable<ITikSentence> result = CallMikrotik(connection, sentence);
+            ProcessResponse(continueOnErrors, result);
+        }
+
         public static void CreateMikrotikDhcpRecord(MikrotikOptions options, ITikConnection connection, Record record)
         {
             if (options.LogToStdout) Console.WriteLine($"+Creating DHCP record. IP: {record.Ip}, MAC: {record.Mac}, Comment: {record.DhcpLabel}, Server: {record.DhcpServer}");
@@ -215,8 +272,10 @@ namespace mktool
         }
         public static void CreateMikrotikWifiRecord(MikrotikOptions options, ITikConnection connection, Record record)
         {
-            if (options.LogToStdout) Console.WriteLine($"+Creating Wifi record. MAC: {record.Mac}, Comment: {record.DnsHostName}");
-            Log.Information("Creating Wifi record. MAC: {mac}, Comment: {dns}", record.Mac, record.DnsHostName);
+            var comment = record.DnsHostName ?? record.DhcpLabel;
+
+            if (options.LogToStdout) Console.WriteLine($"+Creating Wifi record. MAC: {record.Mac}, Comment: {comment}");
+            Log.Information("Creating Wifi record. MAC: {mac}, Comment: {label}", record.Mac, comment);
             string[] sentence = new[]
             {
                 "/interface/wireless/access-list/add",
@@ -234,20 +293,22 @@ namespace mktool
 
         public static void UpdateMikrotikWifiRecord(MikrotikOptions options, ITikConnection connection, ITikSentence existing, Record record)
         {
-            if (string.IsNullOrWhiteSpace(record.DnsHostName) || existing.Words["comment"] == record.DnsHostName)
+            var comment = record.DnsHostName ?? record.DhcpLabel;
+
+            if (string.IsNullOrWhiteSpace(comment) || existing.Words["comment"] == comment)
             {
                 if (!options.SkipExisting)
                 {
-                    if (options.LogToStdout) Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
+                    if (options.LogToStdout) Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {comment}");
                 }
-                Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
+                Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {comment}", record.Mac, comment);
                 return;
             }
 
             if (options.LogToStdout) Console.WriteLine($"^Updating Wifi record. MAC: {record.Mac}");
             Log.Information("Updating Wifi record. MAC: {MAC}", record.Mac);
-            if (options.LogToStdout) Console.WriteLine($">comment: {existing.Words["comment"]} => {record.DnsHostName}");
-            Log.Information("comment: {oldValue} => {newValue}", existing.Words["comment"], record.DnsHostName);
+            if (options.LogToStdout) Console.WriteLine($">comment: {existing.Words["comment"]} => {comment}");
+            Log.Information("comment: {oldValue} => {newValue}", existing.Words["comment"], comment);
 
             string[] sentence = new[]
             {
