@@ -1,9 +1,9 @@
 ﻿using System;
 
-namespace mktool.Utility
+namespace mktool
 {
     class MktoolException : VaultException
-	{
+    {
         public MktoolException()
         {
         }
@@ -20,7 +20,7 @@ namespace mktool.Utility
         {
             ExitCode = exitCode;
         }
-        
+
         public MktoolException(string message, ExitCode exitCode) : base(message)
         {
             ExitCode = exitCode;

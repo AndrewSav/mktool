@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Net;
 using System;
 
-namespace mktool.Utility
+namespace mktool
 {
-    class Ip4Range
+    public class Ip4Range
     {
         private readonly Ip4Span[] _spans;
         private int _currentSpanIndex;
         private uint? _currentIp;
 
         private Ip4Range(Ip4Span[] spans)
-        {            
+        {
             _spans = Normalize(spans);
             if (_spans.Length != 0)
             {
@@ -120,7 +120,7 @@ namespace mktool.Utility
                 throw new FormatException($"Net mask should between 1 and 32, inclusive, '{netMask}' is not");
             }
             uint start = ConvertFromIpAddressToInteger(ip);
-            uint end = start | (uint)IPAddress.HostToNetworkOrder(-1 << (32 - netMask));
+            uint end = start | (uint)IPAddress.HostToNetworkOrder(-1 << 32 - netMask);
             return Ip4Span.Create(start, end);
         }
 

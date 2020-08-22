@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace mktool.Models
+namespace mktool
 {
     class Record
 	{

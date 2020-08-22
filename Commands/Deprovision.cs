@@ -1,10 +1,8 @@
-﻿using mktool.CommandLine;
-using mktool.Utility;
-using Serilog;
+﻿using Serilog;
 using System.Threading.Tasks;
 using tik4net;
 
-namespace mktool.Commands
+namespace mktool
 {
     static class Deprovision
     {

@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace mktool.Utility
+namespace mktool
 {
-    class VaultException : Exception
+    public class VaultException : Exception
     {
         public VaultException()
         {

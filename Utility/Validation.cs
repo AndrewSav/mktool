@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
-namespace mktool.CommandLine
+namespace mktool
 {
     static class Validation
     {

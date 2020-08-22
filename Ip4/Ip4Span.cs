@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace mktool.Utility
+namespace mktool
 {
-    class Ip4Span
+    public class Ip4Span
     {
         public uint Start { get; }
         public uint End { get; }
@@ -31,12 +31,12 @@ namespace mktool.Utility
             if (!IsOverlapped(other)) throw new ArgumentOutOfRangeException(nameof(other), "Spans must overlap");
             return new Ip4Span(Math.Min(Start, other.Start), Math.Max(End, other.End));
         }
-        
+
         public bool TryMerge(Ip4Span other, out Ip4Span mergedItem)
         {
             mergedItem = _default;
             if (!IsOverlapped(other)) return false;
-            mergedItem =  new Ip4Span(Math.Min(Start, other.Start), Math.Max(End, other.End));
+            mergedItem = new Ip4Span(Math.Min(Start, other.Start), Math.Max(End, other.End));
             return true;
         }
     }

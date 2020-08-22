@@ -1,6 +1,4 @@
-﻿using mktool.CommandLine;
-using mktool.Models;
-using Serilog;
+﻿using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using tik4net;
 
-namespace mktool.Utility
+namespace mktool
 {
     static class Mikrotik
     {
@@ -44,7 +42,7 @@ namespace mktool.Utility
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error executing Mikrotik command: {ex.Message}");
-                throw new MktoolException( ExitCode.MikrotikConnectionError);
+                throw new MktoolException(ExitCode.MikrotikConnectionError);
             }
             Log.Verbose("Response: {@response}", response);
             return response;
@@ -74,7 +72,7 @@ namespace mktool.Utility
                     Log.Error(trap.Message);
                     if (!continueOnErrors)
                     {
-                        throw new MktoolException( ExitCode.MikrotikWriteError);
+                        throw new MktoolException(ExitCode.MikrotikWriteError);
                     }
                 }
             }
@@ -106,8 +104,7 @@ namespace mktool.Utility
                 record.DhcpLabel = record.DnsHostName;
             }
 
-            string[] sentence = new[]
-            {
+            string[] sentence = {
                 "/ip/dhcp-server/lease/add",
                 $"=address={record.Ip}",
                 $"=mac-address={record.Mac}",
@@ -210,7 +207,7 @@ namespace mktool.Utility
                 };
             }
 
-            if (options.Execute )
+            if (options.Execute)
             {
                 IEnumerable<ITikSentence> result = CallMikrotik(connection, sentence);
                 ProcessResponse(options.ContinueOnErrors, result);
@@ -264,6 +261,5 @@ namespace mktool.Utility
                 ProcessResponse(options.ContinueOnErrors, result);
             }
         }
-
     }
 }

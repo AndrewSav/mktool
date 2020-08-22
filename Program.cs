@@ -1,6 +1,4 @@
-﻿using mktool.CommandLine;
-using mktool.Utility;
-using Serilog;
+﻿using Serilog;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;

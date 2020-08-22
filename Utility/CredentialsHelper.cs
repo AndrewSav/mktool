@@ -1,11 +1,10 @@
-﻿using mktool.CommandLine;
-using Serilog;
+﻿using Serilog;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace mktool.Utility
+namespace mktool
 {
     static class CredentialsHelper
     {

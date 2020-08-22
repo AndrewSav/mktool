@@ -1,7 +1,4 @@
 ﻿using CsvHelper;
-using mktool.CommandLine;
-using mktool.Models;
-using mktool.Utility;
 using Nett;
 using Newtonsoft.Json;
 using Serilog;
@@ -15,7 +12,7 @@ using System.Threading.Tasks;
 using tik4net;
 using YamlDotNet.Serialization;
 
-namespace mktool.Commands
+namespace mktool
 {
     static class Export
     {

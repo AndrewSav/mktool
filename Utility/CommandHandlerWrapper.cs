@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace mktool.Utility
+namespace mktool
 {
     static class CommandHandlerWrapper
     {
@@ -10,7 +10,7 @@ namespace mktool.Utility
             try
             {
                 await handler(options);
-                return 0;
+                return (int)ExitCode.Success;
             }
             catch (MktoolException ex)
             {

@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace mktool.CommandLine
+namespace mktool
 {
     class ExportOptions : RootOptions
     {

@@ -1,4 +1,4 @@
-﻿namespace mktool.Utility
+﻿namespace mktool
 {
     class MikrotikOptions
     {

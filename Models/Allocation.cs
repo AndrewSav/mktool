@@ -1,4 +1,4 @@
-﻿namespace mktool.Models
+﻿namespace mktool
 {
     class Allocation
     {

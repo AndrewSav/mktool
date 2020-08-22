@@ -3,7 +3,7 @@ using Serilog.Events;
 using System;
 using System.IO;
 
-namespace mktool.Utility
+namespace mktool
 {
     static class LoggingHelper
     {

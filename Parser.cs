@@ -6,10 +6,8 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using mktool.Commands;
-using mktool.Utility;
 
-namespace mktool.CommandLine
+namespace mktool
 {
 
     //TODO: provision WiFi only? (scrape log)

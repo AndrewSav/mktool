@@ -1,13 +1,10 @@
-﻿using mktool.CommandLine;
-using mktool.Models;
-using mktool.Utility;
-using Serilog;
+﻿using Serilog;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using tik4net;
 
-namespace mktool.Commands
+namespace mktool
 {
     static class ProvisionDns
     {

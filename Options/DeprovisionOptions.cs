@@ -1,4 +1,4 @@
-﻿namespace mktool.CommandLine
+﻿namespace mktool
 {
     class DeprovisionOptions : RootOptions
     {
