@@ -1,6 +1,4 @@
-﻿using mktool.Commands;
-using mktool.Utility;
-using System;
+﻿using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
@@ -8,6 +6,8 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using mktool.Commands;
+using mktool.Utility;
 
 namespace mktool.CommandLine
 {
@@ -21,8 +21,8 @@ namespace mktool.CommandLine
 
         public static async Task<int> InvokeAsync(string[] args, IConsole? console = null)
         {
-            // This is to exclued ExceptionHandler middleware, to prevent CommandLine library from swallwing exceptions
-            System.CommandLine.Parsing.Parser? _ = new CommandLineBuilder(RootCommand)
+            // This is to exclude ExceptionHandler middleware, to prevent CommandLine library from swallowing exceptions
+            System.CommandLine.Parsing.Parser _ = new CommandLineBuilder(RootCommand)
                    .UseVersionOption()
                    .UseHelp()
                    .UseEnvironmentVariableDirective()
@@ -42,28 +42,28 @@ namespace mktool.CommandLine
 
         private static RootCommand BuildRootCommand()
         {
-            RootCommand? rootCommand = new RootCommand("Manage IP addresses on a Mikrotik router");
+            RootCommand rootCommand = new RootCommand("Manage IP addresses on a Mikrotik router");
 
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--address", "-a" },
-                    description: "(global) Network address, IP or DNS, for Miktorik"));
+                    description: "(global) Network address, IP or DNS, for Mikrotik"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--user", "-u" },
-                    description: "(global) Connection user for Miktorik"));
+                    description: "(global) Connection user for Mikrotik"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--password", "-p" },
-                    description: "(global) Connection password for Miktorik"));
+                    description: "(global) Connection password for Mikrotik"));
 
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--vault-address", "--va", "-v" },
-                    description: "(global) Vault url, e.g. https://vault, alternatively can be specified in VAULD_ADDR environment variable"));
+                    description: "(global) Vault url, e.g. https://vault, alternatively can be specified in VAULT_ADDR environment variable"));
 
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--vault-user-location", "--vul" },
-                    description: "(global) Path to Mikrotik user in vault, e.g. 'secert/my/path'"));
+                    description: "(global) Path to Mikrotik user in vault, e.g. 'secret/my/path'"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--vault-password-location", "--vpl" },
-                    description: "(global) Path to Mikrotik password in vault, e.g. 'secert/my/path'"));
+                    description: "(global) Path to Mikrotik password in vault, e.g. 'secret/my/path'"));
 
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--vault-user-key", "--vuk" },
@@ -78,18 +78,18 @@ namespace mktool.CommandLine
                     new[] { "--vault-token", "--vt", "-t" },
                     description: $"(global) Vault token, alternatively can be specified in VAULT_TOKEN environment variable, or {rootCommand.Name} can reuse results of 'vault login' command"));
             rootCommand.AddGlobalOption(new Option<bool>(
-                    new[] { "--vault-diag", "--vd", "-z" },
-                    description: $"(global) In case of problems with Vault response will dump the content of the response to stderr"));
+                    new[] { "--vault-debug", "--vd", "-z" },
+                    description: "(global) In case of problems with Vault response will dump the content of the response to stderr"));
             rootCommand.AddGlobalOption(new Option<string>(
                     new[] { "--log-level", "-l" },
-                    description: $"(global) Write log to {LoggingHelper.LogFile}. Re-created each run") { Argument = new Argument<string>().FromAmong(new[] { "verbose", "debug","information","warning","error","fatal"})});
+                    description: $"(global) Write log to {LoggingHelper.LogFile}. Re-created each run") { Argument = new Argument<string>().FromAmong("verbose", "debug", "information", "warning", "error", "fatal")});
 
             rootCommand.Add(BuildExportCommand());
             rootCommand.Add(BuildImportCommand());
             rootCommand.Add(BuildProvisionCommand());
             rootCommand.Add(BuildDeprovisionCommand());
 
-            rootCommand.Handler = CommandHandler.Create<RootOptions>((rootOptions) =>
+            rootCommand.Handler = CommandHandler.Create<RootOptions>(rootOptions =>
             {
                 rootCommand.Invoke(new[] { "-h" });
             });
@@ -226,7 +226,7 @@ namespace mktool.CommandLine
 
             Option<string> dnsNameOption = new Option<string>(new[] { "--dns-name", "-d" }, description: "DNS name to deprovision");
             Option<string> labelOption = new Option<string>(new[] { "--label", "-b" }, description: "DHCP comment to deprovision");
-            Option<bool> disableOption = new Option<bool>(new[] { "--disable", "-q" }, description: "Instead of deliting Mikrotik records mark them as disabled");
+            Option<bool> disableOption = new Option<bool>(new[] { "--disable", "-q" }, description: "Instead of deleting Mikrotik records mark them as disabled");
 
             command.Add(macAddressOption);
             command.Add(ipAddressOption);
@@ -256,10 +256,7 @@ namespace mktool.CommandLine
 
             AddGlobalValidators(command);
 
-            command.Handler = CommandHandler.Create<DeprovisionOptions>(async (deprovisionOptions) =>
-            {
-                return await CommandHandlerWrapper.ExecuteCommandHandler(deprovisionOptions, Deprovision.Execute);
-            });
+            command.Handler = CommandHandler.Create<DeprovisionOptions>(async deprovisionOptions => await CommandHandlerWrapper.ExecuteCommandHandler(deprovisionOptions, Deprovision.Execute));
 
             return command;
         }
@@ -279,7 +276,7 @@ namespace mktool.CommandLine
 
         private static Command BuildProvisionCommand()
         {
-            Command command = new Command("provision", "Provision a new DHCP or DNS record on Mikroik");
+            Command command = new Command("provision", "Provision a new DHCP or DNS record on Mikrotik");
             Command dhcpCommand = BuildProvisionDhcpCommand();
             Command dnsCommand = BuildProvisionDnsCommand();
 
@@ -319,12 +316,12 @@ namespace mktool.CommandLine
                 return null;
             });
 
-            Command dhcpCommand = new Command("dhcp", "Provision a new DHCP record on Mikroik, and return information about the address provisioned")
+            Command dhcpCommand = new Command("dhcp", "Provision a new DHCP record on Mikrotik, and return information about the address provisioned")
             {
                 macAddressOption,
                 new Option<string>(
                     new []{ "--active-host", "--ah", "-r" },
-                    description: "When speified instead of --mac-address option, the mac-address will be fetched from a dynamic dhcp record on Mikrotik, with the active host name specified in this option"),
+                    description: "When specified instead of --mac-address option, the mac-address will be fetched from a dynamic dhcp record on Mikrotik, with the active host name specified in this option"),
                 dnsNameOption,
                 new Option<FileInfo>(
                     new []{ "--config", "-с" },
@@ -359,10 +356,7 @@ namespace mktool.CommandLine
             });
 
 
-            dhcpCommand.Handler = CommandHandler.Create<ProvisionDhcpOptions>(async (provisionDhcpOptions) =>
-            {
-                return await CommandHandlerWrapper.ExecuteCommandHandler(provisionDhcpOptions, ProvisionDhcp.Execute);
-            });
+            dhcpCommand.Handler = CommandHandler.Create<ProvisionDhcpOptions>(async provisionDhcpOptions => await CommandHandlerWrapper.ExecuteCommandHandler(provisionDhcpOptions, ProvisionDhcp.Execute));
             return dhcpCommand;
         }
 
@@ -382,16 +376,16 @@ namespace mktool.CommandLine
             Option<string> recordTypeOption = new Option<string>(
                 new[] { "--record-type", "-r" },
                 description: "Dns record type")
-            { Argument = new Argument<string>(() => "a").FromAmong(new[] { "a", "cname" }) };
-            Command dnsCommand = new Command("dns", "Provision a new DNS record on Mikroik")
+            { Argument = new Argument<string>(() => "a").FromAmong("a", "cname") };
+            Command dnsCommand = new Command("dns", "Provision a new DNS record on Mikrotik")
             {
                 recordTypeOption,
                 new Option<string>(
                     new []{ "--dns-name", "-d" },
-                    description: "DNS record name.  Mutually exclusine with '--regexp'"),
+                    description: "DNS record name.  Mutually exclusive with '--regexp'"),
                 new Option<string>(
                     new []{ "--regexp", "-x" },
-                    description: "Provide Mikrotik regular expression. Mutually exclusine with '--dns-name'"),
+                    description: "Provide Mikrotik regular expression. Mutually exclusive with '--dns-name'"),
                 ipAddressOption,
                 new Option<string>(
                     new []{ "--cname", "-y" },
@@ -440,10 +434,7 @@ namespace mktool.CommandLine
                 return null;
             });
 
-            dnsCommand.Handler = CommandHandler.Create<ProvisionDnsOptions>(async (provisionDnsOptions) =>
-            {
-                return await CommandHandlerWrapper.ExecuteCommandHandler(provisionDnsOptions, ProvisionDns.Execute);
-            });
+            dnsCommand.Handler = CommandHandler.Create<ProvisionDnsOptions>(async provisionDnsOptions => await CommandHandlerWrapper.ExecuteCommandHandler(provisionDnsOptions, ProvisionDns.Execute));
             return dnsCommand;
         }
 
@@ -469,10 +460,7 @@ namespace mktool.CommandLine
             };
             AddGlobalValidators(command);
 
-            command.Handler = CommandHandler.Create<ImportOptions>(async (importOptions) =>
-            {
-                return await CommandHandlerWrapper.ExecuteCommandHandler(importOptions, Import.Execute);
-            });
+            command.Handler = CommandHandler.Create<ImportOptions>(async importOptions => await CommandHandlerWrapper.ExecuteCommandHandler(importOptions, Import.Execute));
             return command;
 
         }
@@ -490,10 +478,7 @@ namespace mktool.CommandLine
             };
             AddGlobalValidators(command);
 
-            command.Handler = CommandHandler.Create<ExportOptions>(async (exportOptions) =>
-            {
-                return await CommandHandlerWrapper.ExecuteCommandHandler(exportOptions, Export.Execute);
-            });
+            command.Handler = CommandHandler.Create<ExportOptions>(async exportOptions => await CommandHandlerWrapper.ExecuteCommandHandler(exportOptions, Export.Execute));
             return command;
         }
     }

@@ -41,12 +41,12 @@ namespace mktool.Utility
                 {
 					additionalInfo = " Have you logged in?";
                 }
-				throw new VaultRequestException($"Error: querring vault at {vaultAddress}/v1/{path}. {(int)result.StatusCode} {result.ReasonPhrase}{additionalInfo}", response);
+				throw new VaultRequestException($"Error: querying vault at {vaultAddress}/v1/{path}. {(int)result.StatusCode} {result.ReasonPhrase}{additionalInfo}", response);
 			}
 
 			if (!(JObject.Parse(response)["data"] is JObject j))
             {
-				throw new VaultDataException("Cannot parse 'data' element of Vault reponse as a json object",response);
+				throw new VaultDataException("Cannot parse 'data' element of Vault response as a json object",response);
             }
 
 			if (vaultKey == "*")

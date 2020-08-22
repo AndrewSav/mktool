@@ -4,7 +4,7 @@ namespace mktool.Models
 {
     class Record
 	{
-		public string? IP { get; set; } // DHCP, DNS
+		public string? Ip { get; set; } // DHCP, DNS
 		public string? Mac { get; set; } // DHCP, WiFi
 		public string? DhcpServer { get; set; }
 		public string? DhcpLabel { get; set; }

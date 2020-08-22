@@ -31,7 +31,7 @@ namespace mktool.Commands
                 HasDhcp = false,
                 HasDns = true,
                 HasWiFi = false,
-                IP = options.IpAddress,
+                Ip = options.IpAddress,
                 DnsCName = options.Cname,
                 DnsRegexp = options.Regexp
             };

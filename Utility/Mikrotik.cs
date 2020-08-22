@@ -22,24 +22,24 @@ namespace mktool.Utility
             ITikConnection? connection;
             try
             {
-                connection = ConnectionFactory.OpenConnection(TikConnectionType.Api, options.Address, username, password);
+                connection = await ConnectionFactory.OpenConnectionAsync(TikConnectionType.Api, options.Address, username, password);
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error connecting to Mikrotik. {ex.Message}");
+                await Console.Error.WriteLineAsync($"Error connecting to Mikrotik. {ex.Message}");
                 throw new MktoolException(ExitCode.MikrotikConnectionError);
             }
             return connection;
         }
 
-        public static IEnumerable<ITikSentence> CallMikrotik(ITikConnection? connection, string[] request)
+        private static IEnumerable<ITikSentence> CallMikrotik(ITikConnection? connection, string[] request)
         {
             Debug.Assert(connection != null);
-            Log.Information("Executing microtik call {@request}", request);
-            IEnumerable<ITikSentence> response;
+            Log.Information("Executing Mikrotik call {@request}", request);
+            List<ITikSentence> response;
             try
             {
-                response = connection.CallCommandSync(request);
+                response = connection.CallCommandSync(request).ToList();
             }
             catch (Exception ex)
             {
@@ -49,10 +49,7 @@ namespace mktool.Utility
             Log.Verbose("Response: {@response}", response);
             return response;
         }
-        public static IEnumerable<ITikSentence> GetDhcpServers(ITikConnection? connection)
-        {
-            return CallMikrotik(connection, new[] { "/ip/dhcp-server/print" });
-        }
+
         public static IEnumerable<ITikSentence> GetDhcpRecords(ITikConnection? connection)
         {
             return CallMikrotik(connection, new[] { "/ip/dhcp-server/lease/print" });
@@ -67,7 +64,7 @@ namespace mktool.Utility
             return CallMikrotik(connection, new[] { "/interface/wireless/access-list/print" });
         }
 
-        public static void ProcessResponse(bool continueOnErrors, IEnumerable<ITikSentence> result)
+        private static void ProcessResponse(bool continueOnErrors, IEnumerable<ITikSentence> result)
         {
             foreach (var responseSentence in result)
             {
@@ -101,8 +98,8 @@ namespace mktool.Utility
 
         public static void CreateMikrotikDhcpRecord(MikrotikOptions options, ITikConnection connection, Record record)
         {
-            if (options.LogToStdout) Console.WriteLine($"+Creating DHCP record. IP: {record.IP}, MAC: {record.Mac}, Comment: {record.DhcpLabel}, Server: {record.DhcpServer}");
-            Log.Information("Creating DHCP record. IP: {IP}, MAC: {MAC}, Comment: {Label}, Server: {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
+            if (options.LogToStdout) Console.WriteLine($"+Creating DHCP record. IP: {record.Ip}, MAC: {record.Mac}, Comment: {record.DhcpLabel}, Server: {record.DhcpServer}");
+            Log.Information("Creating DHCP record. IP: {IP}, MAC: {MAC}, Comment: {Label}, Server: {Server}", record.Ip, record.Mac, record.DhcpLabel, record.DhcpServer);
 
             if (string.IsNullOrWhiteSpace(record.DhcpLabel))
             {
@@ -112,7 +109,7 @@ namespace mktool.Utility
             string[] sentence = new[]
             {
                 "/ip/dhcp-server/lease/add",
-                $"=address={record.IP}",
+                $"=address={record.Ip}",
                 $"=mac-address={record.Mac}",
                 $"=comment={record.DhcpLabel}",
                 $"=server={record.DhcpServer}",
@@ -135,14 +132,14 @@ namespace mktool.Utility
                 record.DhcpLabel = record.DnsHostName;
             }
 
-            record.IP ??= "";
+            record.Ip ??= "";
             record.Mac ??= "";
             record.DhcpLabel ??= "";
             record.DhcpServer ??= "";
 
-            if (existing.Words["address"] != record.IP)
+            if (existing.Words["address"] != record.Ip)
             {
-                fieldsToUpdate.Add("address", record.IP);
+                fieldsToUpdate.Add("address", record.Ip);
             }
             if (existing.Words["comment"] != record.DhcpLabel)
             {
@@ -161,14 +158,14 @@ namespace mktool.Utility
             {
                 if (!options.SkipExisting)
                 {
-                    if (options.LogToStdout) Console.WriteLine($"=DHCP record already exist. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
+                    if (options.LogToStdout) Console.WriteLine($"=DHCP record already exist. IP {record.Ip}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
                 }
-                Log.Information("DHCP record already exist. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
+                Log.Information("DHCP record already exist. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.Ip, record.Mac, record.DhcpLabel, record.DhcpServer);
                 return;
             }
 
-            if (options.LogToStdout) Console.WriteLine($"^Updating DHCP record. IP {record.IP}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
-            Log.Information("Updating DHCP record. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.IP, record.Mac, record.DhcpLabel, record.DhcpServer);
+            if (options.LogToStdout) Console.WriteLine($"^Updating DHCP record. IP {record.Ip}, MAC {record.Mac}, Label {record.DhcpLabel}, Server {record.DhcpServer}");
+            Log.Information("Updating DHCP record. IP {IP}, MAC {MAC}, Label {Label}, Server {Server}", record.Ip, record.Mac, record.DhcpLabel, record.DhcpServer);
             foreach (KeyValuePair<string, string> kvp in fieldsToUpdate)
             {
                 if (options.LogToStdout) Console.WriteLine($">{kvp.Key}: {existing.Words[kvp.Key]} => {kvp.Value}");
@@ -190,14 +187,14 @@ namespace mktool.Utility
             string[] sentence;
             if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase))
             {
-                if (options.LogToStdout) Console.WriteLine($"+Creating DNS A record. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
-                Log.Information($"Creating DNS A record. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.IP);
+                if (options.LogToStdout) Console.WriteLine($"+Creating DNS A record. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.Ip}");
+                Log.Information($"Creating DNS A record. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.Ip);
                 sentence = new[]
                 {
                     "/ip/dns/static/add",
                     $"={record.GetDnsIdField()}={record.GetDnsId()}",
-                    $"=type=A",
-                    $"=address={record.IP}",
+                    "=type=A",
+                    $"=address={record.Ip}",
                 };
             }
             else
@@ -208,7 +205,7 @@ namespace mktool.Utility
                 {
                     "/ip/dns/static/add",
                     $"={record.GetDnsIdField()}={record.GetDnsId()}",
-                    $"=type=CNAME",
+                    "=type=CNAME",
                     $"=cname={record.DnsCName}",
                 };
             }
@@ -228,8 +225,8 @@ namespace mktool.Utility
                 "/interface/wireless/access-list/add",
                 $"=mac-address={record.Mac}",
                 $"=comment={record.DnsHostName}",
-                $"=authentication=true",
-                $"=forwarding=true",
+                "=authentication=true",
+                "=forwarding=true",
             };
             if (options.Execute)
             {

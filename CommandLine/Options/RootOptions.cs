@@ -11,7 +11,7 @@
         public string? VaultPasswordKey { get; set; }
         public string? VaultAddress { get; set; }
         public string? VaultToken { get; set; }
-        public bool VaultDiag { get; set; }
+        public bool VaultDebug { get; set; }
         public string? LogLevel { get; set; }
     }
 }

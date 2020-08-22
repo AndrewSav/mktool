@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace mktool.Utility
 {
-    class CredentialsHelper
+    static class CredentialsHelper
     {
         public static async Task<(string username, string password)> GetUsernameAndPassword(RootOptions options)
         {
-            Log.Information("Retreiving username and password from Vault");
+            Log.Information("Retrieving username and password from Vault");
             try
             {
                 string username;
@@ -24,7 +24,7 @@ namespace mktool.Utility
                 {
                     Debug.Assert(options.VaultUserLocation != null);
                     Debug.Assert(options.VaultUserKey != null);
-                    username = await Vault.GetVaultValue(options.VaultUserLocation, options.VaultUserKey, options.VaultAddress);
+                    username = await Vault.GetVaultValue(options.VaultUserLocation, options.VaultUserKey, options.VaultAddress, options.VaultToken);
                 }
 
                 if (options.Password != null)
@@ -35,42 +35,42 @@ namespace mktool.Utility
                 {
                     Debug.Assert(options.VaultPasswordLocation != null);
                     Debug.Assert(options.VaultPasswordKey != null);
-                    password = await Vault.GetVaultValue(options.VaultPasswordLocation, options.VaultPasswordKey, options.VaultAddress);
+                    password = await Vault.GetVaultValue(options.VaultPasswordLocation, options.VaultPasswordKey, options.VaultAddress, options.VaultToken);
                 }
                 return (username, password);
             }
             catch (VaultRequestException ex)
             {
                 Log.Error(ex,"Error");
-                Console.Error.WriteLine(ex.Message);
-                if (options.VaultDiag)
+                await Console.Error.WriteLineAsync(ex.Message);
+                if (options.VaultDebug)
                 {
                     Log.Debug("Response: {response}", ex.Response);
-                    Console.Error.WriteLine(ex.Response);
+                    await Console.Error.WriteLineAsync(ex.Response);
                 }
                 throw new MktoolException( ExitCode.VaultRequestError);
             }
             catch (VaultMissingKeyException ex)
             {
                 Log.Error(ex, "Error");
-                Console.Error.WriteLine(ex.Message);
-                if (options.VaultDiag)
+                await Console.Error.WriteLineAsync(ex.Message);
+                if (options.VaultDebug)
                 {
                     Log.Debug("Response: {response}", ex.Response);
-                    Console.Error.WriteLine(ex.Response);
+                    await Console.Error.WriteLineAsync(ex.Response);
                 }
                 throw new MktoolException( ExitCode.VaultMissingKey);
             }
             catch (VaultTokenException ex)
             {
                 Log.Error(ex, "Error");
-                Console.Error.WriteLine(ex.Message);
+                await Console.Error.WriteLineAsync(ex.Message);
                 throw new MktoolException( ExitCode.VaultMissingToken);
             }
             catch (HttpRequestException ex)
             {
                 Log.Error(ex, "Error");
-                Console.Error.WriteLine($"Error: HTTP request to Vault failed. {ex.Message}");
+                await Console.Error.WriteLineAsync($"Error: HTTP request to Vault failed. {ex.Message}");
                 throw new MktoolException( ExitCode.VaultHttpError);
             }
         }

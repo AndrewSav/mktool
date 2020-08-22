@@ -8,12 +8,13 @@ namespace mktool.Utility
     class Ip4Range
     {
         private readonly Ip4Span[] _spans;
-        private int _currentSpanIndex = 0;
-        private uint? _currentIp = null;
-        public Ip4Range(Ip4Span[] spans)
+        private int _currentSpanIndex;
+        private uint? _currentIp;
+
+        private Ip4Range(Ip4Span[] spans)
         {            
-            _spans = Normalise(spans);
-            if (!((_spans == null) || _spans.Length == 0))
+            _spans = Normalize(spans);
+            if (_spans.Length != 0)
             {
                 _currentIp = _spans[0].Start;
             }
@@ -50,7 +51,7 @@ namespace mktool.Utility
             _currentIp = _spans[_currentSpanIndex].Start;
         }
 
-        private static Ip4Span[] Normalise(Ip4Span[] spans)
+        private static Ip4Span[] Normalize(Ip4Span[] spans)
         {
             var results = new List<Ip4Span>();
             foreach (var item in spans.OrderBy(x => x.Start))
@@ -110,16 +111,16 @@ namespace mktool.Utility
             {
                 throw new FormatException($"'{parts[0]}' cannot be parsed as IP address");
             }
-            if (int.TryParse(parts[1], out int netmask))
+            if (int.TryParse(parts[1], out int netMask))
             {
-                throw new FormatException($"'{parts[1]}' cannot be parsed as an integer netmask");
+                throw new FormatException($"'{parts[1]}' cannot be parsed as an integer net mask");
             }
-            if (netmask <= 0 || netmask > 32)
+            if (netMask <= 0 || netMask > 32)
             {
-                throw new FormatException($"Netmask should between 1 and 32, inclusive, '{netmask}' is not");
+                throw new FormatException($"Net mask should between 1 and 32, inclusive, '{netMask}' is not");
             }
             uint start = ConvertFromIpAddressToInteger(ip);
-            uint end = start | (uint)IPAddress.HostToNetworkOrder(-1 << (32 - netmask));
+            uint end = start | (uint)IPAddress.HostToNetworkOrder(-1 << (32 - netMask));
             return Ip4Span.Create(start, end);
         }
 

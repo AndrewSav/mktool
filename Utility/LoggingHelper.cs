@@ -7,7 +7,7 @@ namespace mktool.Utility
 {
     static class LoggingHelper
     {
-        public static string LogFile { get => "mktool.log"; }
+        public static string LogFile => "mktool.log";
 
         public static void ConfigureLogging(string? level)
         {

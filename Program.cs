@@ -2,7 +2,6 @@
 using mktool.Utility;
 using Serilog;
 using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -14,12 +13,20 @@ namespace mktool
         {
             try
             {
-                return await Parser.InvokeAsync(args);
+                int result =  await Parser.InvokeAsync(args);
+                if (result != 0)
+                {
+                    return (int) ExitCode.CommandLineError;
+                }
+                else
+                {
+                    return (int) ExitCode.Success;
+                }
             }
             catch (Exception ex)
             {
                 HandleUnhandledException(ex);
-                return 127;
+                return (int)ExitCode.UnhandledException;
             } finally
             {
                 Log.CloseAndFlush();

@@ -32,10 +32,7 @@ namespace mktool.Commands
 
             Debug.Assert(options.File != null);
 
-            if (options.Format == null)
-            {
-                options.Format = GetFormatFromExtension(options.File.Extension);
-            }
+            options.Format ??= GetFormatFromExtension(options.File.Extension);
 
             List<Record> records = ReadRecords(options.File.FullName, options.Format);
 
@@ -49,18 +46,19 @@ namespace mktool.Commands
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
 
-            IEnumerable<ITikSentence>? dhcp = Mikrotik.GetDhcpRecords(connection);
+            List<ITikSentence> dhcp = Mikrotik.GetDhcpRecords(connection).ToList();
             ProcessDhcpRecords(options, connection, dhcp, dhcpRecords);
 
-            IEnumerable<ITikSentence>? dns = Mikrotik.GetDnsRecords(connection);
+            List<ITikSentence> dns = Mikrotik.GetDnsRecords(connection).ToList();
             ProcessDnsRecords(options, connection, dns, dnsRecords);
 
-            IEnumerable<ITikSentence>? wifi = Mikrotik.GetWifiRecords(connection);
+            List<ITikSentence> wifi = Mikrotik.GetWifiRecords(connection).ToList();
             ProcessWiFiRecords(options, connection, wifi, wifiRecords);
         }
 
-        private static void ProcessWiFiRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> wifi, List<Record> wifiRecords)
+        private static void ProcessWiFiRecords(ImportOptions options, ITikConnection connection, List<ITikSentence> wifi, List<Record> wifiRecords)
         {
+
             foreach (Record record in wifiRecords)
             {
                 List<ITikSentence> matches = wifi.Where(x => x.Words.Any(y => y.Key == "mac-address" && y.Value == record.Mac))
@@ -73,7 +71,7 @@ namespace mktool.Commands
                     if (!options.SkipExisting)
                     {
                         Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
-                        Console.WriteLine($"?Warning: message");
+                        Console.WriteLine("?Warning: message");
                     }
                     Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
                     Log.Warning(message);
@@ -92,7 +90,7 @@ namespace mktool.Commands
         }
 
 
-        private static void ProcessDnsRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> dns, List<Record> dnsRecords)
+        private static void ProcessDnsRecords(ImportOptions options, ITikConnection connection, List<ITikSentence> dns, List<Record> dnsRecords)
         {
             foreach (Record record in dnsRecords)
             {
@@ -117,10 +115,10 @@ namespace mktool.Commands
                 {
                     if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase))
                     {
-                        matches = matches.Where(x => x.Words.Any(y => y.Key == "address" && y.Value == record.IP)).ToList();
+                        matches = matches.Where(x => x.Words.Any(y => y.Key == "address" && y.Value == record.Ip)).ToList();
                         if (matches.Count > 1)
                         {
-                            throw new ApplicationException($"We found two static DNS A records from Mikrotik with the same IP ${record.IP}. We do not know how to process it.");
+                            throw new ApplicationException($"We found two static DNS A records from Mikrotik with the same IP ${record.Ip}. We do not know how to process it.");
                         }
                     }
                     else
@@ -151,9 +149,9 @@ namespace mktool.Commands
             {
                 if (!options.SkipExisting)
                 {
-                    Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.IP}");
+                    Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.Ip}");
                 }
-                Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.IP);
+                Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.Ip);
             }
             else
             {
@@ -165,23 +163,23 @@ namespace mktool.Commands
             }
         }
 
-        private static void ProcessDhcpRecords(ImportOptions options, ITikConnection connection, IEnumerable<ITikSentence> dhcp, List<Record> dhcpRecords)
+        private static void ProcessDhcpRecords(ImportOptions options, ITikConnection connection, List<ITikSentence> dhcp, List<Record> dhcpRecords)
         {
 
             foreach (Record record in dhcpRecords)
             {
-                List<ITikSentence>? ipMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "address" && y.Value == record.IP))
+                List<ITikSentence> ipMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "address" && y.Value == record.Ip))
                     .Where(x => x.Words.Any(y => y.Key == "dynamic" && y.Value == "false"))
                     .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
                     .ToList();
-                List<ITikSentence>? macMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && y.Value == record.Mac))
+                List<ITikSentence> macMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && y.Value == record.Mac))
                     .Where(x => x.Words.Any(y => y.Key == "dynamic" && y.Value == "false"))
                     .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
                     .ToList();
 
                 if (ipMatches.Count > 1)
                 {
-                    throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same IP ${record.IP}. We do not know how to process it.");
+                    throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same IP ${record.Ip}. We do not know how to process it.");
                 }
                 if (macMatches.Count > 1)
                 {
@@ -196,9 +194,9 @@ namespace mktool.Commands
                     }
                     else
                     {
-                        string message = $"DHCP record IP {record.IP}, MAC {record.Mac} is ignored. Clashes with records: IP {ipMatches[0].Words["address"]}, MAC {ipMatches[0].Words["mac-address"]} and IP {macMatches[0].Words["address"]}, MAC {macMatches[0].Words["mac-address"]}";
+                        string message = $"DHCP record IP {record.Ip}, MAC {record.Mac} is ignored. Clashes with records: IP {ipMatches[0].Words["address"]}, MAC {ipMatches[0].Words["mac-address"]} and IP {macMatches[0].Words["address"]}, MAC {macMatches[0].Words["mac-address"]}";
                         Log.Warning(message);
-                        Console.WriteLine($"?Warning: message");
+                        Console.WriteLine("?Warning: message");
                     }
                 }
 
@@ -213,7 +211,7 @@ namespace mktool.Commands
                 if (ipMatches.Count == 0 && macMatches.Count == 0)
                 {
                     Mikrotik.CreateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, record);
-                    List<ITikSentence>? dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && string.Equals(y.Value,record.Mac,StringComparison.OrdinalIgnoreCase)))
+                    List<ITikSentence> dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && string.Equals(y.Value,record.Mac,StringComparison.OrdinalIgnoreCase)))
                         .Where(x => x.Words.Any(y => y.Key == "dynamic" && y.Value == "true"))
                         .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
                         .ToList();
@@ -236,7 +234,7 @@ namespace mktool.Commands
                 {
                     valid = false;
                     string text = Toml.WriteString(record.SetEmptyPropertiesToNull());
-                    Console.Error.WriteLine($"Error: Both DnsHostName and DnsRegexp are empty in record");
+                    Console.Error.WriteLine("Error: Both DnsHostName and DnsRegexp are empty in record");
                     Console.Error.Write(text);
                     Log.Error("Both DnsHostName and DnsRegexp are empty in record {@record}", record);
                 }
@@ -246,13 +244,13 @@ namespace mktool.Commands
                     Console.Error.WriteLine($"Error: Both DnsHostName {record.DnsHostName} and DnsRegexp '{record.DnsRegexp}' are present in a single record");
                     Log.Error("Both DnsHostName {hostName} and DnsRegexp '{regexp}' are present in a single record", record.DnsHostName, record.DnsRegexp);
                 }
-                if (!string.IsNullOrWhiteSpace(record.DnsType) && !string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase) && string.Compare(record.DnsType, "CNAME", true) != 0)
+                if (!string.IsNullOrWhiteSpace(record.DnsType) && !string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase) && String.Compare(record.DnsType, "CNAME", StringComparison.OrdinalIgnoreCase) != 0)
                 {
                     valid = false;
                     Console.Error.WriteLine($"Error: record type is not 'A' or 'CNAME': '{record.DnsType}', DnsId: {record.GetDnsId()}");
                     Log.Error("Record type is not 'A' or 'CNAME': '{dnsType}', DnsId: {dns}", record.DnsType, record.GetDnsId());
                 }
-                if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(record.IP))
+                if (string.Equals(record.DnsType, "A", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(record.Ip))
                 {
                     valid = false;
                     Console.Error.WriteLine($"Error: 'A' record must have IP address. {record.GetDnsIdName()}: {record.GetDnsId()}");
@@ -262,7 +260,7 @@ namespace mktool.Commands
                 {
                     valid = false;
                     Console.Error.WriteLine($"Error: 'CNAME' record must have CNAME. {record.GetDnsIdName()}: {record.GetDnsId()}");
-                    Log.Error($"'ACNAME record must have CNAME. {record.GetDnsIdName()}: {{dns}}", record.GetDnsId());
+                    Log.Error($"Error: 'CNAME' record must have CNAME. {record.GetDnsIdName()}: {{dns}}", record.GetDnsId());
                 }
             }
             return valid;
@@ -271,11 +269,11 @@ namespace mktool.Commands
         private static bool ValidateDhcpRecords(List<Record> dhcpRecords)
         {
             // We mainly rely on Mikrotik itself to tell us if something wrong with the data
-            // This vadation to avoid a situation where where keep overwriting the same record with different data
+            // This validation is to avoid a situation where we keep overwriting the same record with different data
             // Mikrotik would be non the wiser
             Log.Information("Validating DHCP records");
             bool valid = true;
-            List<string?> nonUniqueIPs = dhcpRecords.GroupBy(x => x.IP).Where(x => x.Count() > 1).Select(x => x.Key).ToList();
+            List<string?> nonUniqueIPs = dhcpRecords.GroupBy(x => x.Ip).Where(x => x.Count() > 1).Select(x => x.Key).ToList();
             if (nonUniqueIPs.Count > 0)
             {
                 valid = false;
@@ -285,12 +283,12 @@ namespace mktool.Commands
                     Console.Error.WriteLine($"'{line}'");
                 }
             }
-            List<string?> nonUniqueMACs = dhcpRecords.GroupBy(x => x.Mac).Where(x => x.Count() > 1).Select(x => x.Key).ToList();
-            if (nonUniqueMACs.Count > 0)
+            List<string?> nonUniqueMacs = dhcpRecords.GroupBy(x => x.Mac).Where(x => x.Count() > 1).Select(x => x.Key).ToList();
+            if (nonUniqueMacs.Count > 0)
             {
                 valid = false;
                 Console.Error.WriteLine("Your export file contains DHCP records with duplicate MAC addresses:");
-                foreach (string? line in nonUniqueMACs)
+                foreach (string? line in nonUniqueMacs)
                 {
                     Console.Error.WriteLine($"'{line}'");
                 }
@@ -333,7 +331,7 @@ namespace mktool.Commands
             List<Record> result;
             try
             {
-                IDeserializer? deserializer = new DeserializerBuilder().Build();
+                IDeserializer deserializer = new DeserializerBuilder().Build();
                 result = deserializer.Deserialize<List<Record>>(File.ReadAllText(fileName));
             }
             catch (Exception ex)
@@ -347,18 +345,23 @@ namespace mktool.Commands
 
         private static List<Record> ReadTomlExport(string fileName)
         {
-            List<Record> result;
+            Record[]? result;
             try
             {
-                result = Toml.ReadFile<RecordTomlWrapper>(fileName).Record.ToList();
+                result = Toml.ReadFile<RecordTomlWrapper>(fileName).Record;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error: Cannot deserialize '{fileName}'. {ex.Message}");
                 throw new MktoolException( ExitCode.ImportFileError);
             }
+            if (result == null)
+            {
+                Console.Error.WriteLine($"Error: Cannot find records in '{fileName}'.");
+                throw new MktoolException(ExitCode.ImportFileError);
+            }
             Log.Verbose("Toml deserialization result: {@result}", result);
-            return result;
+            return result.ToList();
         }
 
         private static List<Record> ReadCsvExport(string fileName)
@@ -366,8 +369,8 @@ namespace mktool.Commands
             List<Record> result;
             try
             {
-                using StreamReader? reader = new StreamReader(fileName);
-                using CsvReader? csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                using StreamReader reader = new StreamReader(fileName);
+                using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
                 result = csv.GetRecords<Record>().ToList();
             }
             catch (Exception ex)
@@ -387,7 +390,7 @@ namespace mktool.Commands
             string[] supportedExtensions = { "csv", "toml", "yaml", "yml", "json" };
             if (!supportedExtensions.Contains(extension))
             {
-                Console.Error.WriteLine("You have not specified import format, and the file you specified does not have any of the supported format extenstions");
+                Console.Error.WriteLine("You have not specified import format, and the file you specified does not have any of the supported format extensions");
                 throw new MktoolException( ExitCode.MissingFormat);
             }
             return extension == "yml" ? "yaml" : extension;

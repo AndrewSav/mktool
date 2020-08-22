@@ -13,7 +13,7 @@ namespace mktool.Utility
             End = end;
         }
 
-        private static Ip4Span _default = new Ip4Span(0, 0);
+        private static readonly Ip4Span _default = new Ip4Span(0, 0);
 
         public static Ip4Span Create(uint start, uint end)
         {

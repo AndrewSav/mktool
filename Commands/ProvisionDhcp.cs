@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using tik4net;
 
@@ -34,7 +33,7 @@ namespace mktool.Commands
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error: Cannot load configuration '{options.Config.FullName}'; " + ex.Message);
+                await Console.Error.WriteLineAsync($"Error: Cannot load configuration '{options.Config.FullName}'; " + ex.Message);
                 throw new MktoolException(ExitCode.ConfigurationLoadError);
             }
 
@@ -44,13 +43,13 @@ namespace mktool.Commands
 
             if (allocation == null)
             {
-                Console.Error.WriteLine($"Cannot find allocation with name {options.Allocation} in the configuration file");
+                await Console.Error.WriteLineAsync($"Cannot find allocation with name {options.Allocation} in the configuration file");
                 throw new MktoolException(ExitCode.ConfigurationError);
             }
 
             if (string.IsNullOrWhiteSpace(allocation.IpRange))
             {
-                Console.Error.WriteLine($"Allocation {options.Allocation} does not have IpRange");
+                await Console.Error.WriteLineAsync($"Allocation {options.Allocation} does not have IpRange");
                 throw new MktoolException(ExitCode.ConfigurationError);
             }
 
@@ -61,19 +60,19 @@ namespace mktool.Commands
             }
             catch(FormatException ex)
             {
-                Console.Error.WriteLine($"Error: Cannot parse IP range '{allocation.IpRange}'. {ex.Message}");
+                await Console.Error.WriteLineAsync($"Error: Cannot parse IP range '{allocation.IpRange}'. {ex.Message}");
                 throw new MktoolException(ExitCode.ConfigurationError);
             }
 
             if (string.IsNullOrWhiteSpace(allocation.DhcpServer))
             {
-                Console.Error.WriteLine($"Allocation {options.Allocation} does not have DhcpServer");
+                await Console.Error.WriteLineAsync($"Allocation {options.Allocation} does not have DhcpServer");
                 throw new MktoolException(ExitCode.ConfigurationError);
             }
 
             ITikConnection connection = await Mikrotik.ConnectAsync(options);
 
-            IEnumerable<ITikSentence> dhcp = Mikrotik.GetDhcpRecords(connection);
+            List<ITikSentence> dhcp = Mikrotik.GetDhcpRecords(connection).ToList();
             var usedIps = dhcp.Where(x => !x.Words.ContainsKey("disabled") || x.Words["disabled"] != "true")
                 .SelectMany(x => x.Words.Where(y => y.Key == "address")).Select(x=> x.Value).ToList();
             string? ip;
@@ -82,13 +81,13 @@ namespace mktool.Commands
                 ip = range.GetNext();
                 if (ip == null)
                 {
-                    Console.Error.WriteLine($"There are no free allocations left in the given range");
+                    await Console.Error.WriteLineAsync("There are no free allocations left in the given range");
                     throw new MktoolException(ExitCode.AllocationPoolExhausted);
                 }
                 
-            } while (usedIps.Contains(ip.ToString()));
+            } while (usedIps.Contains(ip));
 
-            string macAddress;
+            string? macAddress;
             if (options.MacAddress == null)
             {
                 Debug.Assert(options.ActiveHost != null);
@@ -97,7 +96,7 @@ namespace mktool.Commands
                     .SelectMany(x => x.Words.Where(y => y.Key == "mac-address")).Select(x => x.Value).FirstOrDefault();
                 if (macAddress == null)
                 {
-                    Console.Error.WriteLine($"No dynamic DHCP record with given host name {options.ActiveHost} was found");
+                    await Console.Error.WriteLineAsync($"No dynamic DHCP record with given host name {options.ActiveHost} was found");
                     throw new MktoolException(ExitCode.MikrotikRecordNotFound);
                 }                
             }
@@ -115,12 +114,12 @@ namespace mktool.Commands
                 HasDhcp = true,
                 HasDns = options.DnsName == null,
                 HasWiFi = options.EnableWiFi,
-                IP = ip,
+                Ip = ip,
                 Mac = macAddress
             };
 
             Mikrotik.CreateMikrotikDhcpRecord(GetMikrotikOptions(options), connection, record);
-            List<ITikSentence>? dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && string.Equals(y.Value, record.Mac, StringComparison.OrdinalIgnoreCase)))
+            List<ITikSentence> dynamicMatches = dhcp.Where(x => x.Words.Any(y => y.Key == "mac-address" && string.Equals(y.Value, record.Mac, StringComparison.OrdinalIgnoreCase)))
                 .Where(x => x.Words.Any(y => y.Key == "dynamic" && y.Value == "true"))
                 .Where(x => x.Words.Any(y => y.Key == "disabled" && y.Value == "false"))
                 .ToList();

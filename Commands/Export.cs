@@ -43,7 +43,7 @@ namespace mktool.Commands
 
         private static void WriteOutput(string? fileName, string format, List<Record> sorted, TextWriter output)
         {
-            Log.Information("Writng output");
+            Log.Information("Writing output");
             switch (format)
             {
                 case "csv":
@@ -89,9 +89,9 @@ namespace mktool.Commands
         private static List<Record> SortRecords(List<Record> result)
         {
             Log.Debug("Sorting");
-            IEnumerable<Record>? withIp = result.Where(r => r.IP != null);
-            IEnumerable<Record>? withoutIp = result.Where(r => r.IP == null);
-            List<Record>? sorted = withIp.OrderBy(r => { Debug.Assert(r.IP != null); return Version.Parse(r.IP); }).Concat(withoutIp).ToList();
+            IEnumerable<Record> withIp = result.Where(r => r.Ip != null);
+            IEnumerable<Record> withoutIp = result.Where(r => r.Ip == null);
+            List<Record> sorted = withIp.OrderBy(r => { Debug.Assert(r.Ip != null); return Version.Parse(r.Ip); }).Concat(withoutIp).ToList();
             return sorted;
         }
 
@@ -101,7 +101,7 @@ namespace mktool.Commands
             {
                 if (!item.Words.ContainsKey(".id"))
                 {
-                    Log.Verbose("Tik WiFi record discraded: {@ITikSentence}", item);
+                    Log.Verbose("Tik WiFi record discarded: {@ITikSentence}", item);
                     continue;
                 }
 
@@ -138,7 +138,7 @@ namespace mktool.Commands
             {
                 if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false") || ((item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))))
                 {
-                    Log.Verbose("Tik dns record discraded: {@ITikSentence}", item);
+                    Log.Verbose("Tik dns record discarded: {@ITikSentence}", item);
                     continue;
                 }
 
@@ -150,7 +150,7 @@ namespace mktool.Commands
                 if (item.Words["type"] == "A")
                 {
                     Log.Verbose("Tik dns record processing (type A): {@ITikSentence}", item);
-                    List<Record> matches = result.Where(r => string.Equals(r.IP, item.Words["address"], StringComparison.OrdinalIgnoreCase)).ToList();
+                    List<Record> matches = result.Where(r => string.Equals(r.Ip, item.Words["address"], StringComparison.OrdinalIgnoreCase)).ToList();
                     Log.Verbose("Matches found: {@records}", matches);
                     if (matches.Count > 1)
                     {
@@ -160,7 +160,7 @@ namespace mktool.Commands
                     {
                         Record record = new Record
                         {
-                            IP = item.Words["address"],
+                            Ip = item.Words["address"],
                             DnsType = "A",
                             HasDns = true
                         };
@@ -201,14 +201,14 @@ namespace mktool.Commands
             {
                 if (!item.Words.ContainsKey("dynamic") || (item.Words["dynamic"] != "false"))
                 {
-                    Log.Verbose("Tik dhcp record discraded: {@ITikSentence}", item);
+                    Log.Verbose("Tik dhcp record discarded: {@ITikSentence}", item);
                     continue;
                 }
 
                 Log.Verbose("Tik dhcp record processing: {@ITikSentence}", item);
                 Record record = new Record
                 {
-                    IP = item.Words["address"],
+                    Ip = item.Words["address"],
                     DhcpLabel = item.Words["comment"],
                     Mac = item.Words["mac-address"],
                     DhcpServer = item.Words["server"],
@@ -235,14 +235,13 @@ namespace mktool.Commands
 
         private static void WriteYamlExport(TextWriter output, List<Record> sorted)
         {
-            YamlDotNet.Serialization.ISerializer? serializer = new SerializerBuilder().Build();
+            YamlDotNet.Serialization.ISerializer serializer = new SerializerBuilder().Build();
             serializer.Serialize(output, sorted);
             output.Flush();
         }
 
         private static void WriteTomlExportWrapper(string? fileName, List<Record> sorted, TextWriter output)
         {
-            Stream stream;
             if (fileName == null)
             {
                 RecordTomlWrapper t = new RecordTomlWrapper { Record = sorted.ToArray() };
@@ -250,6 +249,7 @@ namespace mktool.Commands
             }
             else
             {
+                Stream stream;
                 try
                 {
                     output.Close();
@@ -273,7 +273,7 @@ namespace mktool.Commands
 
         private static void WriteCsvExport(TextWriter output, List<Record> sorted)
         {
-            using CsvWriter? csv = new CsvWriter(output, CultureInfo.InvariantCulture);
+            using CsvWriter csv = new CsvWriter(output, CultureInfo.InvariantCulture);
             csv.WriteRecords(sorted);
         }
 
