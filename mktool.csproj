@@ -14,10 +14,10 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Commands\Deprovision.cs~RF2ec5cebd.TMP" />
-    <None Remove="Utility\CredentialsHelper.cs~RFf87420.TMP" />
-  </ItemGroup>
+  <PropertyGroup>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyName>mktool</AssemblyName>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="15.0.5" />
