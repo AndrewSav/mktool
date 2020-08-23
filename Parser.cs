@@ -10,10 +10,6 @@ using System.Threading.Tasks;
 namespace mktool
 {
 
-    //TODO: provision WiFi only? (scrape log)
-    //TODO: info mode, show dynamic leases and wifi failed logs
-
-
     static class Parser
     {
 
@@ -317,7 +313,7 @@ namespace mktool
                 return null;
             });
 
-            Command dhcpCommand = new Command("dhcp", "Provision a new DHCP record on Mikrotik, and return information about the address provisioned")
+            Command dhcpCommand = new Command("dhcp", "Provision a new DHCP record and optionally a DNS and a Wi-Fi record on Mikrotik")
             {
                 macAddressOption,
                 new Option<string>(
@@ -325,7 +321,7 @@ namespace mktool
                     description: "When specified instead of --mac-address option, the mac-address will be fetched from a dynamic dhcp record on Mikrotik, with the active host name specified in this option"),
                 dnsNameOption,
                 new Option<FileInfo>(
-                    new []{ "--config", "-с" },
+                    new []{ "--config", "-c" },
                     description: "Allocations config file path",
                     getDefaultValue: () => new FileInfo("mktool.toml")),
                 new Option<string>(
@@ -352,6 +348,11 @@ namespace mktool
                     !commandResult.Children.Contains("active-host"))
                 {
                     return "One of the options '--mac-address' and '--active-host' is required.";
+                }
+                if (commandResult.Children.Contains("mac-address") &&
+                    commandResult.Children.Contains("active-host"))
+                {
+                    return "Options '--mac-address' and '--active-host' cannot be used together.";
                 }
                 return null;
             });

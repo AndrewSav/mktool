@@ -179,7 +179,7 @@ namespace mktool
                     {
                         throw new ApplicationException($"We found two static DHCP records from Mikrotik with the same IP ${item.Words["address"]}. We do not know how to process it.");
                     }
-                    if (matches.Count == 0 || (item.Words.ContainsKey("regexp")))
+                    if (matches.Count == 0 || item.Words.ContainsKey("regexp") || matches[0].HasDns)
                     {
                         IdentityRecord record = new IdentityRecord
                         {

@@ -20,7 +20,7 @@ namespace mktool
 
             if (string.IsNullOrWhiteSpace(vaultAddress))
             {
-                throw new VaultException("Could not determine VaultAddress");
+                throw new VaultNoAddressException("Could not determine VaultAddress");
             }
 
             string token = GetVaultToken(vaultToken);
@@ -29,7 +29,11 @@ namespace mktool
             HttpClient client = new HttpClient();
             HttpRequestMessage request = new HttpRequestMessage();
             request.Headers.Add("X-Vault-Token", token);
-            request.RequestUri = new Uri($"{vaultAddress}/v1/{path}");
+            if(!Uri.TryCreate($"{vaultAddress}/v1/{path}", UriKind.Absolute, out Uri? uri))
+            {
+                throw new VaultNoAddressException($"Cannot parse URI: '{vaultAddress}/v1/{path}'");
+            }
+            request.RequestUri = uri;
             Log.Debug("Sending HTTP request at {uri}", request.RequestUri);
             HttpResponseMessage? result = await client.SendAsync(request);
             string? response = await result.Content.ReadAsStringAsync();
@@ -47,6 +51,12 @@ namespace mktool
             if (!(JObject.Parse(response)["data"] is JObject j))
             {
                 throw new VaultDataException("Cannot parse 'data' element of Vault response as a json object", response);
+            }
+
+            // KV2
+            if (j["data"] is JObject jd)
+            {
+                j = jd;
             }
 
             if (vaultKey == "*")

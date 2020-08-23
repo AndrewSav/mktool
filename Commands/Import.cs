@@ -383,7 +383,10 @@ namespace mktool
         private static string GetFormatFromExtension(string extension)
         {
             // remove leading dot
-            extension = extension.Substring(1);
+            if (extension.Length > 1)
+            {
+                extension = extension.Substring(1);
+            }
             string[] supportedExtensions = { "csv", "toml", "yaml", "yml", "json" };
             if (!supportedExtensions.Contains(extension))
             {

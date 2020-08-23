@@ -134,8 +134,6 @@ namespace mktool
             {
                 Mikrotik.CreateMikrotikWifiRecord(GetMikrotikOptions(options), connection, record);
             }
-
-            Console.WriteLine(ip);
         }
         private static MikrotikOptions GetMikrotikOptions(ProvisionDhcpOptions options)
         {
@@ -143,7 +141,7 @@ namespace mktool
             {
                 ContinueOnErrors = options.ContinueOnErrors,
                 Execute = options.Execute,
-                LogToStdout = !options.Execute,
+                LogToStdout = true,
                 SkipExisting = true
             };
         }

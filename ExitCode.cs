@@ -19,6 +19,7 @@
         ConfigurationError = 14,
         AllocationPoolExhausted = 15,
         MikrotikRecordNotFound = 16,
+        VaultBadAddress = 17,
         UnhandledException = 127,
     }
 }

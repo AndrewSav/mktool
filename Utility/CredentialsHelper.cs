@@ -49,6 +49,12 @@ namespace mktool
                 }
                 throw new MktoolException( ExitCode.VaultRequestError);
             }
+            catch (VaultNoAddressException ex)
+            {
+                Log.Error(ex, "Error");
+                Console.Error.WriteLine(ex.Message);
+                throw new MktoolException(ExitCode.VaultBadAddress);
+            }
             catch (VaultMissingKeyException ex)
             {
                 Log.Error(ex, "Error");

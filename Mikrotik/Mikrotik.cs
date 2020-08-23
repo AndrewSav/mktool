@@ -146,7 +146,13 @@ namespace mktool
                 $"{recordType}/remove",
                 $"=.id={recordId}",
             };
-            
+
+            //sentence = new[]
+            //{
+            //    "/log/print",
+            //    "?topics=wireless,debug",
+            //};
+
             IEnumerable<ITikSentence> result = CallMikrotik(connection, sentence);
             ProcessResponse(continueOnErrors, result);
         }
@@ -280,7 +286,7 @@ namespace mktool
             {
                 "/interface/wireless/access-list/add",
                 $"=mac-address={record.Mac}",
-                $"=comment={record.DnsHostName}",
+                $"=comment={comment}",
                 "=authentication=true",
                 "=forwarding=true",
             };
@@ -313,7 +319,7 @@ namespace mktool
             string[] sentence = new[]
             {
                 "/interface/wireless/access-list/set",
-                $"=comment={record.DnsHostName}",
+                $"=comment={comment}",
                 $"=.id={existing.Words[".id"]}",
             };
             if (options.Execute)
