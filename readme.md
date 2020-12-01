@@ -239,7 +239,7 @@ Options:
   -o, --format <csv|json|toml|yaml>                      Export format
   -e, --execute                                          By default this command is run in dry-run mode.
                                                          Specify this to actually apply changes to Mikrotik
-  -k, --continue-on-errors                               Does not stop execution with a error code when the
+  -k, --continue-on-errors                               Does not stop execution with a error code when there
                                                          was a error writing a record to Mikrotik
   -s, --skip-existing                                    Reduce output verbosity by not printing already
                                                          existing records that will not be updated
@@ -263,7 +263,7 @@ Options:
 
 #### Skip existing
 
-`-k, --continue-on-errors`. Specify this option to reduce output verbosity by not printing already existing records that will not be updated. Existing records with non-matching values that are going to be updated will still be printed.
+-s, --skip-existing. Specify this option to reduce output verbosity by not printing already existing records that will not be updated. Existing records with non-matching values that are going to be updated will still be printed.
 
 ### Provision DHCP
 
