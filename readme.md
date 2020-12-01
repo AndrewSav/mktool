@@ -263,7 +263,7 @@ Options:
 
 #### Skip existing
 
--s, --skip-existing. Specify this option to reduce output verbosity by not printing already existing records that will not be updated. Existing records with non-matching values that are going to be updated will still be printed.
+`-s, --skip-existing`. Specify this option to reduce output verbosity by not printing already existing records that will not be updated. Existing records with non-matching values that are going to be updated will still be printed.
 
 ### Provision DHCP
 
