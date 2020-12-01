@@ -295,7 +295,7 @@ Options:
                                                          Specify this to actually apply changes to Mikrotik.
 ```
 
-This command allocated an IP address from a pool described in the allocation configuration file and writes correspondent records to Mikrotik. It will deleted existing dynamic DHCP lease for the matching MAC address, see the "Provisioning and deprovisioning" section above.
+This command allocates an IP address from a pool described in the allocation configuration file and writes correspondent records to Mikrotik. It will delete existing dynamic DHCP lease for the matching MAC address, see the "Provisioning and deprovisioning" section above.
 
 #### MAC address
 
