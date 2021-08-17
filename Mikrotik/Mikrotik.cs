@@ -55,7 +55,6 @@ namespace mktool
         public static IEnumerable<ITikSentence> GetDnsRecords(ITikConnection? connection)
         {
             return CallMikrotik(connection, new[] { "/ip/dns/static/print" });
-
         }
         public static IEnumerable<ITikSentence> GetWifiRecords(ITikConnection? connection)
         {

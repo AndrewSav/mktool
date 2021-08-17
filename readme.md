@@ -525,6 +525,10 @@ mktool deprovision -a 10.33.88.1 -u mikrotik -p mysecretpassword -d alias -e
 - tik4net https://github.com/danikf/tik4net
 - YamlDotNet https://github.com/aaubry/YamlDotNet/wiki
 
+## Change log
+
+- 1.0.1.0 - after latest RouterOs upgrade mikrotik no longer returns word "type" if the DNS record is of type "A". Looks like now it's assumed the default. Fixed the code to reflect this
+
 ## License
 
 Copyright 2020 Andrew Savinykh

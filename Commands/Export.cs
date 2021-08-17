@@ -153,7 +153,7 @@ namespace mktool
                     continue;
                 }
 
-                if (item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))
+                if (item.Words.ContainsKey("type") && item.Words["type"] != "A" && (item.Words["type"] != "CNAME"))
                 {
                     Log.Verbose("Tik dns record with unsupported type discarded: {@ITikSentence}", item);
                     continue;
@@ -170,7 +170,7 @@ namespace mktool
                     throw new ApplicationException("We received a DNS record from Mikrotik that has neither name nor regexp field. We do not know how to process it.");
                 }
 
-                if (item.Words["type"] == "A")
+                if (!item.Words.ContainsKey("type") || item.Words["type"] == "A")
                 {
                     Log.Verbose("Tik dns record processing (type A): {@ITikSentence}", item);
                     List<IdentityRecord> matches = result.Where(r => string.Equals(r.Ip, item.Words["address"], StringComparison.OrdinalIgnoreCase)).ToList();
@@ -202,7 +202,7 @@ namespace mktool
                         Log.Verbose("Mktool record updated: {@record}", record);
                     }
                 }
-                if (item.Words["type"] == "CNAME")
+                if (item.Words.ContainsKey("type") && item.Words["type"] == "CNAME")
                 {
                     Log.Verbose("Tik dns record processing (type CNAME): {@ITikSentence}", item);
                     IdentityRecord record = new IdentityRecord
