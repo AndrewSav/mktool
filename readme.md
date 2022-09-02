@@ -527,11 +527,12 @@ mktool deprovision -a 10.33.88.1 -u mikrotik -p mysecretpassword -d alias -e
 
 ## Change log
 
+- 1.0.2.0 - Fixed an exception if a DHCP record does not have a comment. Upgraded .net framework and dependencies
 - 1.0.1.0 - after latest RouterOs upgrade mikrotik no longer returns word "type" if the DNS record is of type "A". Looks like now it's assumed the default. Fixed the code to reflect this
 
 ## License
 
-Copyright 2020 Andrew Savinykh
+Copyright 2020-2022 Andrew Savinykh
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

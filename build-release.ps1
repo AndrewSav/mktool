@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $global:ProgressPreference = "SilentlyContinue"
 $name = "mktool"
 
-$targetFramework = "netcoreapp3.1"
+$targetFramework = "net6.0"
 
 $targetFolder = Join-Path $PSScriptRoot "Build"
 $debugBin = Join-Path $PSScriptRoot "bin\Debug\$targetFramework"
