@@ -19,7 +19,7 @@ namespace mktool
 
         public static bool IsIpValid(string address)
         {
-            return IPAddress.TryParse(address, out IPAddress ip) && ip.AddressFamily == AddressFamily.InterNetwork;
+            return IPAddress.TryParse(address, out IPAddress? ip) && ip.AddressFamily == AddressFamily.InterNetwork;
         }
 
         public static bool IsMacValid(string address)

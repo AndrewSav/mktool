@@ -95,7 +95,7 @@ namespace mktool
         }
         private static Ip4Span ParseIp(string el)
         {
-            if (!IPAddress.TryParse(el, out IPAddress address))
+            if (!IPAddress.TryParse(el, out IPAddress? address))
             {
                 throw new FormatException($"'{el}' cannot be parsed as IP address");
             }
@@ -107,7 +107,7 @@ namespace mktool
         {
             string[] parts = el.Split("/");
             if (parts.Length != 2) throw new FormatException($"'{el}' should contain ip address and network mask separated by '/'");
-            if (!IPAddress.TryParse(parts[0], out IPAddress ip))
+            if (!IPAddress.TryParse(parts[0], out IPAddress? ip))
             {
                 throw new FormatException($"'{parts[0]}' cannot be parsed as IP address");
             }
@@ -129,11 +129,11 @@ namespace mktool
             string[] ips = el.Split("-");
             if (ips.Length != 2) throw new FormatException($"'{el}' should contain start of range and end of range separated by '-'");
 
-            if (!IPAddress.TryParse(ips[0], out IPAddress first))
+            if (!IPAddress.TryParse(ips[0], out IPAddress? first))
             {
                 throw new FormatException($"'{ips[0]}' cannot be parsed as IP address");
             }
-            if (!IPAddress.TryParse(ips[1], out IPAddress second))
+            if (!IPAddress.TryParse(ips[1], out IPAddress? second))
             {
                 throw new FormatException($"'{ips[1]}' cannot be parsed as IP address");
             }

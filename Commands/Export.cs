@@ -242,7 +242,7 @@ namespace mktool
                 {
                     DhcpId = item.Words[".id"],
                     Ip = item.Words["address"],
-                    DhcpLabel = item.Words["comment"],
+                    DhcpLabel = item.Words.ContainsKey("comment") ? item.Words["comment"] : "",
                     Mac = item.Words["mac-address"],
                     DhcpServer = item.Words["server"],
                     HasDhcp = true

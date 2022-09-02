@@ -159,7 +159,7 @@ namespace mktool
         public static void CreateMikrotikDhcpRecord(MikrotikOptions options, ITikConnection connection, Record record)
         {
             if (options.LogToStdout) Console.WriteLine($"+Creating DHCP record. IP: {record.Ip}, MAC: {record.Mac}, Comment: {record.DhcpLabel}, Server: {record.DhcpServer}");
-            Log.Information("Creating DHCP record. IP: {IP}, MAC: {MAC}, Comment: {Label}, Server: {Server}", record.Ip, record.Mac, record.DhcpLabel, record.DhcpServer);
+            Log.Information("Creating DHCP record. IP: {IP}, MAC: {MAC}, Comment: {Label}, Server: {Server}", record.Ip ?? "", record.Mac ?? "", record.DhcpLabel ?? "" , record.DhcpServer ?? "");
 
             if (string.IsNullOrWhiteSpace(record.DhcpLabel))
             {

@@ -21,7 +21,7 @@ $targetSelfContainedTgz = Join-Path $targetFolder "$name-$rid-$tag.tgz"
 
 mkdir $targetFolder -force | Out-Null
 
-dotnet publish -c Release -r $rid -p:PublishTrimmed=true -p:PublishSingleFile=true
+dotnet publish -c Release -r $rid -p:PublishSingleFile=true --self-contained
 Compress-Archive "$releasePublish/*" $targetSelfContainedZip -Force
 Push-Location
 cd $releasePublish

@@ -70,7 +70,7 @@ namespace mktool
                         Console.WriteLine($"=Wifi record already exist. MAC: {record.Mac}, DnsHostName: {record.DnsHostName}");
                         Console.WriteLine($"?Warning: {message}");
                     }
-                    Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac, record.DnsHostName);
+                    Log.Information("Wifi record already exist. MAC: {mac}, DnsHostName: {dns}", record.Mac ?? "", record.DnsHostName ?? "");
                     Log.Warning(message);
                     continue;
                 }
@@ -148,7 +148,7 @@ namespace mktool
                 {
                     Console.WriteLine($"=DNS A record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, IP: {record.Ip}");
                 }
-                Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType, record.Ip);
+                Log.Information($"DNS A record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, IP: {{address}}", record.GetDnsId(), record.DnsType ?? "", record.Ip ?? "");
             }
             else
             {
@@ -156,7 +156,7 @@ namespace mktool
                 {
                     Console.WriteLine($"=DNS CNAME record already exist. {record.GetDnsIdName()}: {record.GetDnsId()}, DnsType: {record.DnsType}, DnsСName: {record.DnsCName}");
                 }
-                Log.Information($"DNS CNAME record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType, record.DnsCName);
+                Log.Information($"DNS CNAME record already exist. {record.GetDnsIdName()}: {{dns}}, DnsType: {{type}}, DnsCName: {{cname}}", record.GetDnsId(), record.DnsType ?? "", record.DnsCName ?? "");
             }
         }
 
@@ -308,7 +308,7 @@ namespace mktool
 
         private static List<Record> ReadJsonExport(string fileName)
         {
-            List<Record> result;
+            List<Record>? result;
             try
             { 
                 result = JsonConvert.DeserializeObject<List<Record>>(File.ReadAllText(fileName));
@@ -319,7 +319,7 @@ namespace mktool
                 throw new MktoolException(ExitCode.ImportFileError);
             }
             Log.Verbose("Json deserialization result: {@result}", result);
-            return result;
+            return result ?? new List<Record>();
                 
         }
 
@@ -366,8 +366,8 @@ namespace mktool
             List<Record> result;
             try
             {
-                using StreamReader reader = new StreamReader(fileName);
-                using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                using StreamReader reader = new(fileName);
+                using CsvReader csv = new(reader, CultureInfo.InvariantCulture);
                 result = csv.GetRecords<Record>().ToList();
             }
             catch (Exception ex)
@@ -385,7 +385,7 @@ namespace mktool
             // remove leading dot
             if (extension.Length > 1)
             {
-                extension = extension.Substring(1);
+                extension = extension[1..];
             }
             string[] supportedExtensions = { "csv", "toml", "yaml", "yml", "json" };
             if (!supportedExtensions.Contains(extension))
